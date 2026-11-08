@@ -1612,6 +1612,8 @@ class _Translations$update$en_US extends Translations$update$zh_CN {
 
 	// Translations
 	@override String get newVersion => 'New version available';
+	@override String get snoozeWeek => 'Don\'t remind for a week';
+	@override String get snoozeWeekSuccess => 'No update reminders for the next week';
 	@override String get goToGitHub => 'Go to GitHub';
 	@override String get downloadInstall => 'Download & install';
 	@override String get apkDownloadFailed => 'Download failed, please try again later';
@@ -2874,6 +2876,8 @@ extension on TranslationsEnUs {
 			'notification.permissionRequired' => 'Please enable notification permission',
 			'notification.macPermissionRequired' => 'Please enable notification permission in system settings',
 			'update.newVersion' => 'New version available',
+			'update.snoozeWeek' => 'Don\'t remind for a week',
+			'update.snoozeWeekSuccess' => 'No update reminders for the next week',
 			'update.goToGitHub' => 'Go to GitHub',
 			'update.downloadInstall' => 'Download & install',
 			'update.apkDownloadFailed' => 'Download failed, please try again later',

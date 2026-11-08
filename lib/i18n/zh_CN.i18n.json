@@ -1300,6 +1300,8 @@
   },
   "update": {
     "newVersion": "发现新版本",
+    "snoozeWeek": "一周内不再提醒",
+    "snoozeWeekSuccess": "已设置：一周内不再提醒",
     "goToGitHub": "前往GitHub",
     "downloadInstall": "下载安装",
     "apkDownloadFailed": "下载失败，请稍后再试！",

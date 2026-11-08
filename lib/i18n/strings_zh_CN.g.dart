@@ -4083,6 +4083,12 @@ class Translations$update$zh_CN {
 	/// zh-CN: '发现新版本'
 	String get newVersion => '发现新版本';
 
+	/// zh-CN: '一周内不再提醒'
+	String get snoozeWeek => '一周内不再提醒';
+
+	/// zh-CN: '已设置：一周内不再提醒'
+	String get snoozeWeekSuccess => '已设置：一周内不再提醒';
+
 	/// zh-CN: '前往GitHub'
 	String get goToGitHub => '前往GitHub';
 
@@ -5359,6 +5365,8 @@ extension on Translations {
 			'notification.permissionRequired' => '请开启通知权限',
 			'notification.macPermissionRequired' => '请在系统设置中开启通知权限',
 			'update.newVersion' => '发现新版本',
+			'update.snoozeWeek' => '一周内不再提醒',
+			'update.snoozeWeekSuccess' => '已设置：一周内不再提醒',
 			'update.goToGitHub' => '前往GitHub',
 			'update.downloadInstall' => '下载安装',
 			'update.apkDownloadFailed' => '下载失败，请稍后再试！',

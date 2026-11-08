@@ -9,6 +9,7 @@ import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_guard/permission_guard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/main.dart';
@@ -17,6 +18,40 @@ import 'package:zephyr/service/update/json/github_release_json.dart';
 import 'package:zephyr/type/pipe.dart';
 import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/widgets/toast.dart';
+
+/// 「一周内不再提醒」静默期截止时间的存储键（毫秒时间戳）。
+const String updateSnoozeUntilPrefsKey = 'update_snooze_until_ms';
+
+/// 「一周内不再提醒」的静默时长。
+const Duration updateSnoozeDuration = Duration(days: 7);
+
+/// 更新提醒是否处于「一周内不再提醒」的静默期。
+Future<bool> isUpdateReminderSnoozed() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final untilMs = prefs.getInt(updateSnoozeUntilPrefsKey);
+    if (untilMs == null) return false;
+    return DateTime.now().millisecondsSinceEpoch < untilMs;
+  } catch (e, stackTrace) {
+    logger.e('读取更新提醒静默时间失败', error: e, stackTrace: stackTrace);
+    return false;
+  }
+}
+
+/// 设置「一周内不再提醒」。
+Future<bool> snoozeUpdateReminderForWeek() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final untilMs = DateTime.now()
+        .add(updateSnoozeDuration)
+        .millisecondsSinceEpoch;
+    await prefs.setInt(updateSnoozeUntilPrefsKey, untilMs);
+    return true;
+  } catch (e, stackTrace) {
+    logger.e('保存更新提醒静默时间失败', error: e, stackTrace: stackTrace);
+    return false;
+  }
+}
 
 Future<String> getAppVersion() async {
   String version = 'Unknown';
@@ -179,6 +214,10 @@ bool _isGithubReleaseDownloadUrl(String url) {
 
 Future<void> checkUpdate(BuildContext context) async {
   if (!context.mounted) return;
+  if (await isUpdateReminderSnoozed()) {
+    logger.d('更新提醒处于静默期，跳过本次检查');
+    return;
+  }
   final temp = await getCloudVersion();
   final cloudVersion = temp.tagName;
   final releaseInfo = temp.body;
@@ -214,6 +253,15 @@ Future<void> checkUpdate(BuildContext context) async {
             child: MarkdownBlock(data: releaseNotes),
           ),
           actions: [
+            TextButton(
+              child: Text(t.update.snoozeWeek),
+              onPressed: () async {
+                context.pop();
+                if (await snoozeUpdateReminderForWeek()) {
+                  showSuccessToast(t.update.snoozeWeekSuccess);
+                }
+              },
+            ),
             TextButton(
               child: Text(t.common.cancel),
               onPressed: () => context.pop(),

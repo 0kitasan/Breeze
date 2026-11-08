@@ -1299,6 +1299,8 @@
   },
   "update": {
     "newVersion": "New version available",
+    "snoozeWeek": "Don't remind for a week",
+    "snoozeWeekSuccess": "No update reminders for the next week",
     "goToGitHub": "Go to GitHub",
     "downloadInstall": "Download & install",
     "apkDownloadFailed": "Download failed, please try again later",
