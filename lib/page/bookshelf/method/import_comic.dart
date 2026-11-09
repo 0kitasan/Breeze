@@ -14,6 +14,7 @@ import 'package:zephyr/service/download/download_asset_store.dart';
 import 'package:zephyr/src/rust/api/data_backup.dart';
 import 'package:zephyr/src/rust/api/simple.dart';
 import 'package:zephyr/util/get_path.dart';
+import 'package:zephyr/widgets/toast.dart';
 
 const String _kProcessedComicInfoFile = 'processed_comic_info.json';
 const String _kVersionValue = 'v2';
@@ -142,10 +143,16 @@ Future<String?> pickComicZipAndroid() async {
   final cacheZipFile = File(p.join(cacheDir.path, 'zip', 'comic.zip'));
   await cacheZipFile.parent.create(recursive: true);
 
-  final result = await _filePickerChannel.invokeMethod<String>(
-    'pickBackupZip',
-    {'destPath': cacheZipFile.path},
-  );
+  String? result;
+  try {
+    result = await _filePickerChannel.invokeMethod<String>('pickBackupZip', {
+      'destPath': cacheZipFile.path,
+    });
+  } on PlatformException catch (e) {
+    // 部分外置存储/SD 卡无法解析路径，原生侧会抛 UnsupportedOperationException。
+    logger.w('原生文件选择器失败', error: e);
+    showErrorToast(t.error.importFailed(error: e.message ?? e.code));
+  }
   if (result == null) {
     try {
       await cacheDir.delete(recursive: true);

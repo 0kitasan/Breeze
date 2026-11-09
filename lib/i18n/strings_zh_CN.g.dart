@@ -45,6 +45,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	/// zh-CN: 'Breeze'
 	String get appName => 'Breeze';
 
+	late final Translations$database$zh_CN database = Translations$database$zh_CN.internal(_root);
 	late final Translations$common$zh_CN common = Translations$common$zh_CN.internal(_root);
 	late final Translations$error$zh_CN error = Translations$error$zh_CN.internal(_root);
 	late final Translations$navigation$zh_CN navigation = Translations$navigation$zh_CN.internal(_root);
@@ -80,6 +81,18 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$notification$zh_CN notification = Translations$notification$zh_CN.internal(_root);
 	late final Translations$update$zh_CN update = Translations$update$zh_CN.internal(_root);
 	late final Translations$dialog$zh_CN dialog = Translations$dialog$zh_CN.internal(_root);
+}
+
+// Path: database
+class Translations$database$zh_CN {
+	Translations$database$zh_CN.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// zh-CN: '数据库不兼容，请使用更新版本的软件'
+	String get incompatible => '数据库不兼容，请使用更新版本的软件';
 }
 
 // Path: common
@@ -4129,6 +4142,7 @@ extension on Translations {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
 			'appName' => 'Breeze',
+			'database.incompatible' => '数据库不兼容，请使用更新版本的软件',
 			'common.ok' => '确定',
 			'common.cancel' => '取消',
 			'common.save' => '保存',
@@ -4639,9 +4653,9 @@ extension on Translations {
 			'reader.perComicFollowGlobal' => '跟随全局',
 			'reader.perComicGlobalIs' => '全局为',
 			'reader.perComicThisComic' => '本漫',
-			'reader.infoDisplay' => '信息项显示',
 			_ => null,
 		} ?? switch (path) {
+			'reader.infoDisplay' => '信息项显示',
 			'reader.pageNumber' => '页数',
 			'reader.pageNumberSubtitle' => '显示当前页/总页数',
 			'reader.networkStatus' => '网络状态',
@@ -5153,9 +5167,9 @@ extension on Translations {
 			'discover.pluginManagement' => '插件管理',
 			'discover.customOrder' => '自定义插件顺序',
 			'discover.resetOrder' => '恢复默认顺序',
-			'discover.noPlugins' => '暂无可用插件，去插件商店安装一个吧~',
 			_ => null,
 		} ?? switch (path) {
+			'discover.noPlugins' => '暂无可用插件，去插件商店安装一个吧~',
 			'discover.pluginStore' => '插件商店',
 			'discover.browseInstall' => '浏览安装',
 			'discover.noPluginForSearch' => '暂无可用插件，无法搜索',

@@ -1,6 +1,9 @@
 {
   "@@locale": "en_US",
   "appName": "Breeze",
+  "database": {
+    "incompatible": "The database is incompatible. Please update to a newer version."
+  },
   "common": {
     "ok": "OK",
     "cancel": "Cancel",

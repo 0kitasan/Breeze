@@ -49,6 +49,7 @@ import 'package:zephyr/util/font/font_profile.dart';
 import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/util/manage_cache.dart';
 import 'package:zephyr/util/rust_loader.dart';
+import 'package:zephyr/widgets/database_incompatible_app.dart';
 import 'package:zephyr/widgets/desktop/custom_title_bar.dart';
 import 'package:zephyr/widgets/desktop/intent.dart';
 import 'package:zephyr/main.dart';
@@ -171,6 +172,8 @@ Future<void> main(List<String> args) async {
           child: const MyApp(),
         ),
       );
+    } on ObjectBoxSchemaMismatchException {
+      await _runDatabaseIncompatibleApp();
     } catch (e, stack) {
       // 捕获初始化阶段（_initServices）可能抛出的异常
       if (kDebugMode || sentryDsn.isEmpty) {
@@ -238,11 +241,27 @@ Future<void> main(List<String> args) async {
             ),
           ),
         );
+      } on ObjectBoxSchemaMismatchException {
+        await _runDatabaseIncompatibleApp();
       } catch (exception, stackTrace) {
         await Sentry.captureException(exception, stackTrace: stackTrace);
       }
     },
   );
+}
+
+/// 数据库版本高于当前代码时，用最小应用提示用户升级，而不是直接崩溃。
+Future<void> _runDatabaseIncompatibleApp() async {
+  try {
+    final systemInfo = await SystemLocaleService.getInfo();
+    final appLocale = I18nHelper.toAppLocale(systemInfo.locale);
+    if (appLocale != null) {
+      LocaleSettings.setLocale(appLocale);
+    }
+  } catch (_) {
+    // 语言探测失败时保持默认语言。
+  }
+  runApp(const DatabaseIncompatibleApp());
 }
 
 Future<(GlobalSettingCubit, PluginRegistryCubit)> _initServices() async {

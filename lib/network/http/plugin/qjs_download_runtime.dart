@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cbor/simple.dart' as cbor;
+import 'package:worker_manager/worker_manager.dart';
 import 'package:zephyr/main.dart';
 import 'package:zephyr/network/http/plugin/qjs_fetch_image_result.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
@@ -254,6 +255,10 @@ Future<Uint8List> executeQjsFetchImageBytes({
   call: qjsTaskCall,
 );
 
+QjsFetchImageHttpResult _decodeQjsFetchImageResult(Uint8List encoded) {
+  return QjsFetchImageHttpResult.fromCbor(cbor.cbor.decode(encoded));
+}
+
 /// 调用插件图片函数，并解码 Rust reqwest 返回的 CBOR 结果信息。
 Future<QjsFetchImageHttpResult> executeQjsFetchImageResult({
   required String pluginId,
@@ -270,7 +275,10 @@ Future<QjsFetchImageHttpResult> executeQjsFetchImageResult({
     taskGroupKey: taskGroupKey,
     call: qjsFetchImage,
   );
-  return QjsFetchImageHttpResult.fromCbor(cbor.cbor.decode(encoded));
+  // 大图 CBOR 解码会阻塞 UI isolate（Sentry ANR: _readBytes），放到 worker 池。
+  return workerManager.execute<QjsFetchImageHttpResult>(
+    () => _decodeQjsFetchImageResult(encoded),
+  );
 }
 
 bool _shouldUseQjsCallOnce(String pluginId) {

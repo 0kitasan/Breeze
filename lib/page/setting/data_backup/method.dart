@@ -158,10 +158,16 @@ Future<String?> pickBackupZipAndroid() async {
   await cacheZipFile.parent.create(recursive: true);
 
   logger.i('调用 Android 原生选择器，目标路径：${cacheZipFile.path}');
-  final result = await _filePickerChannel.invokeMethod<String>(
-    'pickBackupZip',
-    {'destPath': cacheZipFile.path},
-  );
+  String? result;
+  try {
+    result = await _filePickerChannel.invokeMethod<String>('pickBackupZip', {
+      'destPath': cacheZipFile.path,
+    });
+  } on PlatformException catch (e) {
+    // 部分外置存储/SD 卡无法解析路径，原生侧会抛 UnsupportedOperationException。
+    logger.w('原生文件选择器失败', error: e);
+    showErrorToast('${t.dataBackup.selectBackupFailed}：${e.message ?? e.code}');
+  }
   logger.i('Android 原生选择器返回：$result');
   if (result == null) {
     // 用户取消选择，清理已创建的临时目录

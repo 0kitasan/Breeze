@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:markdown_widget/widget/markdown_block.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:open_file/open_file.dart';
@@ -181,14 +182,18 @@ Future<void> installApk(String apkUrl) async {
 }
 
 Future<bool> _requestInstallPackagesPermission() async {
-  if (Platform.isAndroid) {
-    var status = await Permission.requestInstallPackages.status;
+  if (!Platform.isAndroid) return false;
+  try {
+    final status = await Permission.requestInstallPackages.status;
     if (status.isGranted) {
       return true;
     } else if (status.isDenied) {
-      var requestResult = await Permission.requestInstallPackages.request();
+      final requestResult = await Permission.requestInstallPackages.request();
       return requestResult.isGranted;
     }
+  } on PlatformException catch (e) {
+    // 用户取消安装权限弹窗属于预期情况。
+    logger.w('请求安装权限失败', error: e);
   }
   return false;
 }

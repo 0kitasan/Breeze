@@ -40,6 +40,7 @@ class TranslationsEnUs extends Translations with BaseTranslations<AppLocale, Tra
 
 	// Translations
 	@override String get appName => 'Breeze';
+	@override late final _Translations$database$en_US database = _Translations$database$en_US._(_root);
 	@override late final _Translations$common$en_US common = _Translations$common$en_US._(_root);
 	@override late final _Translations$error$en_US error = _Translations$error$en_US._(_root);
 	@override late final _Translations$navigation$en_US navigation = _Translations$navigation$en_US._(_root);
@@ -75,6 +76,16 @@ class TranslationsEnUs extends Translations with BaseTranslations<AppLocale, Tra
 	@override late final _Translations$notification$en_US notification = _Translations$notification$en_US._(_root);
 	@override late final _Translations$update$en_US update = _Translations$update$en_US._(_root);
 	@override late final _Translations$dialog$en_US dialog = _Translations$dialog$en_US._(_root);
+}
+
+// Path: database
+class _Translations$database$en_US extends Translations$database$zh_CN {
+	_Translations$database$en_US._(TranslationsEnUs root) : this._root = root, super.internal(root);
+
+	final TranslationsEnUs _root; // ignore: unused_field
+
+	// Translations
+	@override String get incompatible => 'The database is incompatible. Please update to a newer version.';
 }
 
 // Path: common
@@ -1641,6 +1652,7 @@ extension on TranslationsEnUs {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
 			'appName' => 'Breeze',
+			'database.incompatible' => 'The database is incompatible. Please update to a newer version.',
 			'common.ok' => 'OK',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -2151,9 +2163,9 @@ extension on TranslationsEnUs {
 			'reader.perComicFollowGlobal' => 'Follow global',
 			'reader.perComicGlobalIs' => 'Global is',
 			'reader.perComicThisComic' => 'This comic',
-			'reader.infoDisplay' => 'Info display',
 			_ => null,
 		} ?? switch (path) {
+			'reader.infoDisplay' => 'Info display',
 			'reader.pageNumber' => 'Page number',
 			'reader.pageNumberSubtitle' => 'Show current/total page count',
 			'reader.networkStatus' => 'Network status',
@@ -2665,9 +2677,9 @@ extension on TranslationsEnUs {
 			'discover.customOrder' => 'Custom plugin order',
 			'discover.resetOrder' => 'Reset order',
 			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
-			'discover.pluginStore' => 'Plugin Store',
 			_ => null,
 		} ?? switch (path) {
+			'discover.pluginStore' => 'Plugin Store',
 			'discover.browseInstall' => 'Browse & Install',
 			'discover.noPluginForSearch' => 'No plugins available, cannot search',
 			'discover.pluginInfoLoadFailed' => ({required Object error}) => 'Failed to load plugin info: ${error}',

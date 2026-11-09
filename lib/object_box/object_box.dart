@@ -7,6 +7,16 @@ import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/object_box/model.dart';
 import 'package:zephyr/object_box/objectbox.g.dart';
 
+/// 数据库 schema 比当前代码新（通常是用户降级安装）。
+class ObjectBoxSchemaMismatchException implements Exception {
+  const ObjectBoxSchemaMismatchException(this.details);
+
+  final String details;
+
+  @override
+  String toString() => 'ObjectBoxSchemaMismatchException: $details';
+}
+
 class ObjectBox {
   late final Store store;
 
@@ -95,9 +105,15 @@ class ObjectBox {
           final store = await openStore(directory: dbPath);
           return ObjectBox._create(store);
         } catch (innerError) {
+          final message = innerError.toString();
+          // 用户降级安装时，数据库 entity ID 会比当前代码新，无法打开。
+          if (message.contains('higher than') &&
+              message.contains('from model')) {
+            throw ObjectBoxSchemaMismatchException(message);
+          }
           // 3. 并发核心处理：如果是由于锁冲突导致的 10199 错误
-          if (innerError.toString().contains('10199') ||
-              innerError.toString().contains('Input/output error')) {
+          if (message.contains('10199') ||
+              message.contains('Input/output error')) {
             retryCount++;
             // 稍微等一下（给另一个线程一点时间完成 Open）
             await Future.delayed(Duration(milliseconds: 200 * retryCount));
