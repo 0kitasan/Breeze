@@ -16,8 +16,25 @@ import 'package:zephyr/config/router/router.gr.dart' show ComicReadRoute;
 
 import 'package:zephyr/page/comic_info/models/read_launch_adapter.dart';
 import 'package:zephyr/main.dart';
+import 'package:zephyr/widgets/toast.dart';
 
 void goToComicRead(
+  BuildContext context,
+  String comicId,
+  ComicEntryType type,
+  dynamic allInfo,
+  String from,
+) {
+  try {
+    _goToComicRead(context, comicId, type, allInfo, from);
+  } catch (e) {
+    // 插件详情数据异常时不要让点击无反应，也不要冒到 FlutterError。
+    logger.e(e);
+    showErrorToast(e.toString());
+  }
+}
+
+void _goToComicRead(
   BuildContext context,
   String comicId,
   ComicEntryType type,
