@@ -124,16 +124,20 @@ Flatpak 版本通过自建软件源分发，以确保在不同发行版上的兼
 #### 2. 一键安装
 
 ```shell
-curl -fsSL https://raw.githubusercontent.com/deretame/flathub/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/breeze-project-org/Breeze-flathub/main/install.sh | bash
 ```
 
 或手动添加软件源后安装：
 
 ```shell
 flatpak remote-add --user --if-not-exists breeze \
-  https://raw.githubusercontent.com/deretame/flathub/main/breeze.flatpakrepo
+  https://raw.githubusercontent.com/breeze-project-org/Breeze-flathub/main/breeze.flatpakrepo
 flatpak install --user -y breeze io.github.windy.breeze
 ```
+
+> 已添加过旧软件源（`deretame.github.io/Breeze-flathub`）的用户，先执行一次
+> `flatpak remote-modify --user --url=https://breeze-project-org.github.io/Breeze-flathub/repo/ breeze`
+> 或重新运行一键安装脚本，否则 `flatpak update` 会因旧地址失效而报错。
 
 > GNOME 50 Runtime 会随安装自动拉取，无需手动安装。
 

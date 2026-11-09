@@ -778,6 +778,6 @@ jobs:
           GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
           VERSION: ${{ github.event.inputs.version }}
         run: |
-          gh api repos/deretame/Breeze-flathub/actions/workflows/sync.yml/dispatches \
+          gh api repos/breeze-project-org/Breeze-flathub/actions/workflows/sync.yml/dispatches \
             -f ref=main \
             -f "inputs[version]=$VERSION"
