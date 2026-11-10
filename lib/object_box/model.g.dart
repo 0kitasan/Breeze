@@ -774,3 +774,29 @@ Map<String, dynamic> _$SearchBookmarkToJson(SearchBookmark instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };
+
+ComicReadChapter _$ComicReadChapterFromJson(Map<String, dynamic> json) =>
+    ComicReadChapter(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      uniqueKey: json['uniqueKey'] as String,
+      source: json['source'] as String,
+      comicId: json['comicId'] as String,
+      chapterId: json['chapterId'] as String,
+      chapterTitle: json['chapterTitle'] as String,
+      chapterOrder: (json['chapterOrder'] as num).toInt(),
+      readAt: DateTime.parse(json['readAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+    );
+
+Map<String, dynamic> _$ComicReadChapterToJson(ComicReadChapter instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'uniqueKey': instance.uniqueKey,
+      'source': instance.source,
+      'comicId': instance.comicId,
+      'chapterId': instance.chapterId,
+      'chapterTitle': instance.chapterTitle,
+      'chapterOrder': instance.chapterOrder,
+      'readAt': instance.readAt.toIso8601String(),
+      'updatedAt': instance.updatedAt.toIso8601String(),
+    };

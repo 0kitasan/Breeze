@@ -35,6 +35,9 @@ class EpButtonWidget extends StatelessWidget {
   final int index;
   final bool isReversed;
 
+  /// 是否已读过该章节；已读行整体置灰，保留可点击。
+  final bool isRead;
+
   /// 下载是否被插件允许；为 false 时仍显示下载按钮，点击后由调用方弹出禁用原因。
   final bool downloadAllowed;
   final String downloadDisabledReason;
@@ -55,6 +58,7 @@ class EpButtonWidget extends StatelessWidget {
     required this.from,
     required this.index,
     required this.isReversed,
+    this.isRead = false,
     this.downloadAllowed = true,
     this.downloadDisabledReason = '',
     this.onAction,
@@ -84,6 +88,9 @@ class EpButtonWidget extends StatelessWidget {
           final selectionMode = controller.selectionMode;
           final selected = controller.selectedIds.contains(chapter.id);
           final colorScheme = context.theme.colorScheme;
+          final readColor = colorScheme.onSurfaceVariant.withValues(
+            alpha: 0.55,
+          );
           return InkWell(
             onTap: selectionMode ? onToggleSelect : () => _openRead(context),
             onLongPress: onEnterSelect,
@@ -95,7 +102,9 @@ class EpButtonWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected
                     ? colorScheme.primaryContainer.withValues(alpha: 0.35)
-                    : context.theme.colorScheme.surfaceContainerHigh,
+                    : isRead
+                    ? colorScheme.surfaceContainerLow
+                    : colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(8),
                 border: selected
                     ? Border.all(
@@ -123,7 +132,7 @@ class EpButtonWidget extends StatelessWidget {
                     episodeLabel,
                     style: context.theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: context.theme.colorScheme.primary,
+                      color: isRead ? readColor : colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -133,9 +142,9 @@ class EpButtonWidget extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+                        fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
                         fontSize: 15,
-                        color: context.textColor,
+                        color: isRead ? readColor : context.textColor,
                       ),
                     ),
                   ),

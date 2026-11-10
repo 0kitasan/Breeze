@@ -17,6 +17,7 @@ import 'package:zephyr/page/comic_follow/cubit/comic_follow_cubit.dart';
 import 'package:zephyr/page/comic_info/comic_info.dart';
 import 'package:zephyr/page/comic_info/json/normal/normal_comic_all_info.dart';
 import 'package:zephyr/page/download/models/download_chapter.dart';
+import 'package:zephyr/service/reader/comic_read_chapter_repository.dart';
 import 'package:zephyr/type/enum.dart';
 import 'package:zephyr/type/pipe.dart';
 import 'package:zephyr/util/context/context_extensions.dart';
@@ -121,6 +122,10 @@ class _ComicInfoState extends State<_ComicInfo>
   final Set<String> _collapsedGroups = {};
   String _collapsedForComic = '';
   NormalComicAllInfo? _currentInfo;
+  // 已读章节 id 集合：与当前漫画绑定，阅读器写库后经 repository 变更流刷新。
+  Set<String> _readChapterIds = const {};
+  String _readChapterKey = '';
+  StreamSubscription<String>? _readChapterSubscription;
   // 追更线上总数同步护栏：记住已同步到的章节数。数字变大才再同步一次，
   // 下拉刷新后长出的新话不会被吞；下载入口的 comicInfoDyn 是本地快照
   // （已下载数），不能当线上总数写——只在 PluginComicDetailSource 时同步。
@@ -168,12 +173,47 @@ class _ComicInfoState extends State<_ComicInfo>
         .state
         .bookshelfSetting
         .reverseChapters;
+    _readChapterSubscription = ComicReadChapterRepository.instance.changes
+        .listen(_onReadChaptersChanged);
   }
 
   @override
   void dispose() {
+    _readChapterSubscription?.cancel();
     _dlController.dispose();
     super.dispose();
+  }
+
+  String get _readChapterComicKey =>
+      '${widget.from.trim()}:${_comicId.trim()}';
+
+  void _onReadChaptersChanged(String comicKey) {
+    if (!mounted) return;
+    if (comicKey != _readChapterComicKey) return;
+    _reloadReadChapters();
+  }
+
+  void _reloadReadChapters() {
+    final ids = ComicReadChapterRepository.instance.readChapterIds(
+      source: widget.from,
+      comicId: _comicId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _readChapterKey = _readChapterComicKey;
+      _readChapterIds = ids;
+    });
+  }
+
+  /// 首次进入/切换漫画时同步加载已读集合；build 期只读，不触发 setState。
+  void _loadReadChaptersIfNeeded() {
+    final key = _readChapterComicKey;
+    if (key == _readChapterKey) return;
+    _readChapterKey = key;
+    _readChapterIds = ComicReadChapterRepository.instance.readChapterIds(
+      source: widget.from,
+      comicId: _comicId,
+    );
   }
 
   @override
@@ -305,6 +345,7 @@ class _ComicInfoState extends State<_ComicInfo>
                   comicInfoDyn = state.comicInfo;
                   _currentInfo = state.allInfo;
                   _comicId = state.comicId ?? _comicId;
+                  _loadReadChaptersIfNeeded();
                   _syncFollowFromOnlineDetail(state.comicInfo, state.allInfo!);
                   initHistory(
                     context,
@@ -948,6 +989,7 @@ class _ComicInfoState extends State<_ComicInfo>
       from: widget.from,
       index: index,
       isReversed: _isReversed,
+      isRead: _readChapterIds.contains(chapter.id),
       downloadAllowed: downloadAllowed,
       downloadDisabledReason: downloadDisabledReason,
       onAction: () => _onChapterAction(context, chapter, downloadAllowed),

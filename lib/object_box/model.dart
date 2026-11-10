@@ -1355,6 +1355,75 @@ String searchBookmarkUniqueKey(
   return '${source.trim()}|${keyword.trim()}|${anchorComicId.trim()}';
 }
 
+/// 已读章节记录：详情页据此把读过的章节置灰。
+///
+/// 只记录“打开过阅读器”的章节，不做进度百分比；[uniqueKey] 复合唯一：
+/// `$source:$comicId:$chapterId`，同一章重复打开只更新 [readAt]。
+/// 本地记录，不参与云同步；随数据备份导出/导入。
+@Entity()
+@JsonSerializable()
+class ComicReadChapter {
+  @Id()
+  int id;
+
+  @Unique()
+  String uniqueKey;
+
+  /// 插件 uuid。
+  @Index()
+  String source;
+
+  /// 漫画 id。
+  @Index()
+  String comicId;
+
+  /// 章节宿主内部匹配 key（与详情页 [DownloadChapter.id] / 阅读器 epId 一致）。
+  String chapterId;
+
+  /// 章节标题快照，便于调试/后续展示。
+  String chapterTitle;
+
+  /// 章节顺序快照。
+  int chapterOrder;
+
+  @Property(type: PropertyType.date)
+  DateTime readAt;
+
+  @Property(type: PropertyType.date)
+  DateTime updatedAt;
+
+  ComicReadChapter({
+    this.id = 0,
+    required this.uniqueKey,
+    required this.source,
+    required this.comicId,
+    required this.chapterId,
+    required this.chapterTitle,
+    required this.chapterOrder,
+    required this.readAt,
+    required this.updatedAt,
+  });
+
+  Map<String, dynamic> toJson() => _$ComicReadChapterToJson(this);
+
+  factory ComicReadChapter.fromJson(Map<String, dynamic> json) =>
+      _$ComicReadChapterFromJson(json);
+
+  @override
+  String toString() {
+    return jsonEncode(toJson());
+  }
+}
+
+/// 已读章节复合唯一键：`$source:$comicId:$chapterId`。
+String comicReadChapterUniqueKey(
+  String source,
+  String comicId,
+  String chapterId,
+) {
+  return '${source.trim()}:${comicId.trim()}:${chapterId.trim()}';
+}
+
 /// 只保留 `ReadSettingState` 认识的 key，脏 key（旧版本残留/手改）直接丢弃。
 ///
 /// 白名单与类型都从 `ReadSettingState` 自身派生：以后加字段零改动，

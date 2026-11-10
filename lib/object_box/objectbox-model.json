@@ -1709,10 +1709,70 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "25:6201344080645988501",
+      "lastPropertyId": "9:2602095408306467254",
+      "name": "ComicReadChapter",
+      "properties": [
+        {
+          "id": "1:4645271067751715607",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:3534345812281495906",
+          "name": "uniqueKey",
+          "indexId": "23:3258118490632543861",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "3:688064501638049182",
+          "name": "source",
+          "indexId": "24:6637648555345094002",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:1694988035982615099",
+          "name": "comicId",
+          "indexId": "25:5810473701313311",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "5:4005109357240596517",
+          "name": "chapterId",
+          "type": 9
+        },
+        {
+          "id": "6:6807572747429703225",
+          "name": "chapterTitle",
+          "type": 9
+        },
+        {
+          "id": "7:2547835665836008606",
+          "name": "chapterOrder",
+          "type": 6
+        },
+        {
+          "id": "8:5982302843953594876",
+          "name": "readAt",
+          "type": 10
+        },
+        {
+          "id": "9:2602095408306467254",
+          "name": "updatedAt",
+          "type": 10
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "24:8962918020027396430",
-  "lastIndexId": "22:2025477056965874216",
+  "lastEntityId": "25:6201344080645988501",
+  "lastIndexId": "25:5810473701313311",
   "lastRelationId": "0:0",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

@@ -260,6 +260,7 @@ Future<void> _clearObjectBoxData({bool preserveDownloads = false}) async {
   objectbox.comicFolderBox.removeAll();
   objectbox.comicLinkBox.removeAll();
   objectbox.comicReadPreferenceBox.removeAll();
+  objectbox.comicReadChapterBox.removeAll();
   objectbox.searchBookmarkBox.removeAll();
 }
 
@@ -370,6 +371,11 @@ Future<void> _restoreObjectBoxData(Map<String, dynamic> json) async {
     objectbox.comicReadPreferenceBox,
     json['comicReadPreference'] as List?,
     (j) => ComicReadPreference.fromJson(j),
+  );
+  putAll(
+    objectbox.comicReadChapterBox,
+    json['comicReadChapter'] as List?,
+    (j) => ComicReadChapter.fromJson(j),
   );
   putAll(
     objectbox.searchBookmarkBox,

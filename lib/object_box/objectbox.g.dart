@@ -2037,6 +2037,73 @@ final _entities = <obx_int.ModelEntity>[
     relations: <obx_int.ModelRelation>[],
     backlinks: <obx_int.ModelBacklink>[],
   ),
+  obx_int.ModelEntity(
+    id: const obx_int.IdUid(25, 6201344080645988501),
+    name: 'ComicReadChapter',
+    lastPropertyId: const obx_int.IdUid(9, 2602095408306467254),
+    flags: 0,
+    properties: <obx_int.ModelProperty>[
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(1, 4645271067751715607),
+        name: 'id',
+        type: 6,
+        flags: 1,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(2, 3534345812281495906),
+        name: 'uniqueKey',
+        type: 9,
+        flags: 2080,
+        indexId: const obx_int.IdUid(23, 3258118490632543861),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(3, 688064501638049182),
+        name: 'source',
+        type: 9,
+        flags: 2048,
+        indexId: const obx_int.IdUid(24, 6637648555345094002),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(4, 1694988035982615099),
+        name: 'comicId',
+        type: 9,
+        flags: 2048,
+        indexId: const obx_int.IdUid(25, 5810473701313311),
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(5, 4005109357240596517),
+        name: 'chapterId',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(6, 6807572747429703225),
+        name: 'chapterTitle',
+        type: 9,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(7, 2547835665836008606),
+        name: 'chapterOrder',
+        type: 6,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(8, 5982302843953594876),
+        name: 'readAt',
+        type: 10,
+        flags: 0,
+      ),
+      obx_int.ModelProperty(
+        id: const obx_int.IdUid(9, 2602095408306467254),
+        name: 'updatedAt',
+        type: 10,
+        flags: 0,
+      ),
+    ],
+    relations: <obx_int.ModelRelation>[],
+    backlinks: <obx_int.ModelBacklink>[],
+  ),
 ];
 
 /// Shortcut for [obx.Store.new] that passes [getObjectBoxModel] and for Flutter
@@ -2082,8 +2149,8 @@ obx_int.ModelDefinition getObjectBoxModel() {
     // Typically, this is done with `dart run build_runner build`.
     generatorVersion: obx_int.GeneratorVersion.v2025_12_16,
     entities: _entities,
-    lastEntityId: const obx_int.IdUid(24, 8962918020027396430),
-    lastIndexId: const obx_int.IdUid(22, 2025477056965874216),
+    lastEntityId: const obx_int.IdUid(25, 6201344080645988501),
+    lastIndexId: const obx_int.IdUid(25, 5810473701313311),
     lastRelationId: const obx_int.IdUid(0, 0),
     lastSequenceId: const obx_int.IdUid(0, 0),
     retiredEntityUids: const [
@@ -4701,6 +4768,84 @@ obx_int.ModelDefinition getObjectBoxModel() {
         return object;
       },
     ),
+    ComicReadChapter: obx_int.EntityDefinition<ComicReadChapter>(
+      model: _entities[17],
+      toOneRelations: (ComicReadChapter object) => [],
+      toManyRelations: (ComicReadChapter object) => {},
+      getId: (ComicReadChapter object) => object.id,
+      setId: (ComicReadChapter object, int id) {
+        object.id = id;
+      },
+      objectToFB: (ComicReadChapter object, fb.Builder fbb) {
+        final uniqueKeyOffset = fbb.writeString(object.uniqueKey);
+        final sourceOffset = fbb.writeString(object.source);
+        final comicIdOffset = fbb.writeString(object.comicId);
+        final chapterIdOffset = fbb.writeString(object.chapterId);
+        final chapterTitleOffset = fbb.writeString(object.chapterTitle);
+        fbb.startTable(10);
+        fbb.addInt64(0, object.id);
+        fbb.addOffset(1, uniqueKeyOffset);
+        fbb.addOffset(2, sourceOffset);
+        fbb.addOffset(3, comicIdOffset);
+        fbb.addOffset(4, chapterIdOffset);
+        fbb.addOffset(5, chapterTitleOffset);
+        fbb.addInt64(6, object.chapterOrder);
+        fbb.addInt64(7, object.readAt.millisecondsSinceEpoch);
+        fbb.addInt64(8, object.updatedAt.millisecondsSinceEpoch);
+        fbb.finish(fbb.endTable());
+        return object.id;
+      },
+      objectFromFB: (obx.Store store, ByteData fbData) {
+        final buffer = fb.BufferContext(fbData);
+        final rootOffset = buffer.derefObject(0);
+        final idParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          4,
+          0,
+        );
+        final uniqueKeyParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 6, '');
+        final sourceParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 8, '');
+        final comicIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 10, '');
+        final chapterIdParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 12, '');
+        final chapterTitleParam = const fb.StringReader(
+          asciiOptimization: true,
+        ).vTableGet(buffer, rootOffset, 14, '');
+        final chapterOrderParam = const fb.Int64Reader().vTableGet(
+          buffer,
+          rootOffset,
+          16,
+          0,
+        );
+        final readAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 18, 0),
+        );
+        final updatedAtParam = DateTime.fromMillisecondsSinceEpoch(
+          const fb.Int64Reader().vTableGet(buffer, rootOffset, 20, 0),
+        );
+        final object = ComicReadChapter(
+          id: idParam,
+          uniqueKey: uniqueKeyParam,
+          source: sourceParam,
+          comicId: comicIdParam,
+          chapterId: chapterIdParam,
+          chapterTitle: chapterTitleParam,
+          chapterOrder: chapterOrderParam,
+          readAt: readAtParam,
+          updatedAt: updatedAtParam,
+        );
+
+        return object;
+      },
+    ),
   };
 
   return obx_int.ModelDefinition(model, bindings);
@@ -6280,5 +6425,53 @@ class SearchBookmark_ {
   /// See [SearchBookmark.anchorIndex].
   static final anchorIndex = obx.QueryIntegerProperty<SearchBookmark>(
     _entities[16].properties[11],
+  );
+}
+
+/// [ComicReadChapter] entity fields to define ObjectBox queries.
+class ComicReadChapter_ {
+  /// See [ComicReadChapter.id].
+  static final id = obx.QueryIntegerProperty<ComicReadChapter>(
+    _entities[17].properties[0],
+  );
+
+  /// See [ComicReadChapter.uniqueKey].
+  static final uniqueKey = obx.QueryStringProperty<ComicReadChapter>(
+    _entities[17].properties[1],
+  );
+
+  /// See [ComicReadChapter.source].
+  static final source = obx.QueryStringProperty<ComicReadChapter>(
+    _entities[17].properties[2],
+  );
+
+  /// See [ComicReadChapter.comicId].
+  static final comicId = obx.QueryStringProperty<ComicReadChapter>(
+    _entities[17].properties[3],
+  );
+
+  /// See [ComicReadChapter.chapterId].
+  static final chapterId = obx.QueryStringProperty<ComicReadChapter>(
+    _entities[17].properties[4],
+  );
+
+  /// See [ComicReadChapter.chapterTitle].
+  static final chapterTitle = obx.QueryStringProperty<ComicReadChapter>(
+    _entities[17].properties[5],
+  );
+
+  /// See [ComicReadChapter.chapterOrder].
+  static final chapterOrder = obx.QueryIntegerProperty<ComicReadChapter>(
+    _entities[17].properties[6],
+  );
+
+  /// See [ComicReadChapter.readAt].
+  static final readAt = obx.QueryDateProperty<ComicReadChapter>(
+    _entities[17].properties[7],
+  );
+
+  /// See [ComicReadChapter.updatedAt].
+  static final updatedAt = obx.QueryDateProperty<ComicReadChapter>(
+    _entities[17].properties[8],
   );
 }
