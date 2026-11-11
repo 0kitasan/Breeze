@@ -3213,6 +3213,9 @@ class Translations$more$zh_CN {
 
 	/// zh-CN: '更新日志'
 	String get changelog => '更新日志';
+
+	/// zh-CN: '新'
+	String get newBadge => '新';
 }
 
 // Path: search
@@ -5137,6 +5140,7 @@ extension on Translations {
 			'more.sync' => '同步',
 			'more.comicFollow' => '追更',
 			'more.changelog' => '更新日志',
+			'more.newBadge' => '新',
 			'search.title' => '搜索',
 			'search.searchHint' => '搜索...',
 			'search.selectSource' => '选择漫画源',
@@ -5172,9 +5176,9 @@ extension on Translations {
 			'discover.title' => '发现',
 			'discover.search' => '搜索',
 			'discover.settings' => '设置',
-			'discover.pluginManagement' => '插件管理',
 			_ => null,
 		} ?? switch (path) {
+			'discover.pluginManagement' => '插件管理',
 			'discover.customOrder' => '自定义插件顺序',
 			'discover.resetOrder' => '恢复默认顺序',
 			'discover.noPlugins' => '暂无可用插件，去插件商店安装一个吧~',

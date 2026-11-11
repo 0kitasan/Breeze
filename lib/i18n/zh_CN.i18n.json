@@ -1024,7 +1024,8 @@
     "downloadTasks": "下载任务",
     "sync": "同步",
     "comicFollow": "追更",
-    "changelog": "更新日志"
+    "changelog": "更新日志",
+    "newBadge": "新"
   },
   "search": {
     "title": "搜索",

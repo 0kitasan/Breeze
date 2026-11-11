@@ -1233,6 +1233,7 @@ class _Translations$more$en_US extends Translations$more$zh_CN {
 	@override String get sync => 'Sync';
 	@override String get comicFollow => 'Updates';
 	@override String get changelog => 'Changelog';
+	@override String get newBadge => 'NEW';
 }
 
 // Path: search
@@ -2642,6 +2643,7 @@ extension on TranslationsEnUs {
 			'more.sync' => 'Sync',
 			'more.comicFollow' => 'Updates',
 			'more.changelog' => 'Changelog',
+			'more.newBadge' => 'NEW',
 			'search.title' => 'Search',
 			'search.searchHint' => 'Search...',
 			'search.selectSource' => 'Select Source',
@@ -2678,9 +2680,9 @@ extension on TranslationsEnUs {
 			'discover.search' => 'Search',
 			'discover.settings' => 'Settings',
 			'discover.pluginManagement' => 'Plugin Management',
-			'discover.customOrder' => 'Custom plugin order',
 			_ => null,
 		} ?? switch (path) {
+			'discover.customOrder' => 'Custom plugin order',
 			'discover.resetOrder' => 'Reset order',
 			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
 			'discover.pluginStore' => 'Plugin Store',

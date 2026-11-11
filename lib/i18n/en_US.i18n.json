@@ -1023,7 +1023,8 @@
     "downloadTasks": "Download Tasks",
     "sync": "Sync",
     "comicFollow": "Updates",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "newBadge": "NEW"
   },
   "search": {
     "title": "Search",

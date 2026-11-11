@@ -48,4 +48,21 @@ void main() {
     });
     expect(await isUpdateReminderSnoozed(), isTrue);
   });
+
+  test('打开更新日志后记录已读版本', () async {
+    expect(await isChangelogSeen('v1.2.3'), isFalse);
+
+    await markChangelogSeen('v1.2.3');
+
+    expect(await isChangelogSeen('v1.2.3'), isTrue);
+    // 新版本仍需重新提示
+    expect(await isChangelogSeen('v1.2.4'), isFalse);
+  });
+
+  test('没有待提示的更新时打开日志不写入已读版本', () async {
+    await markChangelogSeen();
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(changelogSeenVersionPrefsKey), isNull);
+  });
 }

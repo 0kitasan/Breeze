@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/main.dart';
 import 'package:zephyr/network/utils/github_proxy.dart';
+import 'package:zephyr/service/update/check_update.dart';
 import 'package:zephyr/service/update/json/github_release_json.dart';
 import 'package:zephyr/util/error_filter.dart';
 
@@ -40,6 +41,8 @@ class _ChangelogPageState extends State<ChangelogPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    // 看过更新日志就清掉「更多」页的 NEW 徽标，同一版本不再提示。
+    markChangelogSeen();
     // 首次进入自动刷新
     _fetchReleases(refresh: true);
   }
