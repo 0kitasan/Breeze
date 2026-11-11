@@ -5,6 +5,7 @@ import 'package:zephyr/config/global/global_setting.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/page/setting/common/setting_ui.dart';
 import 'package:zephyr/page/setting/global/widgets.dart';
+import 'package:zephyr/util/network_policy.dart';
 import 'package:zephyr/widgets/fluent_dropdown.dart';
 
 @RoutePage()
@@ -40,6 +41,20 @@ class ContentNetworkSettingPage extends StatelessWidget {
             enabled: state.proxySetting.enabled,
             type: state.proxySetting.type,
             currentProxy: state.proxySetting.address,
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.lan_outlined),
+            title: Text(t.settings.blockPrivateNetwork),
+            subtitle: Text(t.settings.blockPrivateNetworkSubtitle),
+            thumbIcon: kSettingSwitchThumbIcon,
+            value: state.blockPrivateNetwork,
+            onChanged: (value) {
+              cubit.updateState(
+                (current) => current.copyWith(blockPrivateNetwork: value),
+              );
+              // 立刻生效：配置变更会同步到已加载的插件。
+              applyPrivateNetworkPolicy(blockPrivateNetwork: value);
+            },
           ),
           SwitchListTile(
             secondary: const Icon(Icons.download_outlined),

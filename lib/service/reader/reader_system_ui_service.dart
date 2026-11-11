@@ -20,8 +20,7 @@ class ReaderSystemUiService {
 
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
   bool get _isMobile =>
-      !kIsWeb &&
-      !(Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+      !kIsWeb && !(Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   /// 延迟同步系统栏显隐。
   void scheduleSync(

@@ -153,6 +153,8 @@
     "proxyTypeSubtitle": "选择代理协议",
     "proxyTypeHttp": "HTTP",
     "proxyTypeSocks5": "SOCKS5",
+    "blockPrivateNetwork": "内网拦截",
+    "blockPrivateNetworkSubtitle": "拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭",
     "updateAccelerate": "更新下载加速",
     "updateAccelerateSubtitle": "开启后优先使用代理加速 GitHub 更新链接",
     "retryDownloadUntilSuccess": "下载失败后持续重试",

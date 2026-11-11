@@ -264,6 +264,8 @@ class _Translations$settings$en_US extends Translations$settings$zh_CN {
 	@override String get proxyTypeSubtitle => 'Choose proxy protocol';
 	@override String get proxyTypeHttp => 'HTTP';
 	@override String get proxyTypeSocks5 => 'SOCKS5';
+	@override String get blockPrivateNetwork => 'Block private network';
+	@override String get blockPrivateNetworkSubtitle => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default';
 	@override String get updateAccelerate => 'Update acceleration';
 	@override String get updateAccelerateSubtitle => 'Use proxy to accelerate GitHub update links';
 	@override String get retryDownloadUntilSuccess => 'Keep retrying failed downloads';
@@ -1795,6 +1797,8 @@ extension on TranslationsEnUs {
 			'settings.proxyTypeSubtitle' => 'Choose proxy protocol',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.blockPrivateNetwork' => 'Block private network',
+			'settings.blockPrivateNetworkSubtitle' => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default',
 			'settings.updateAccelerate' => 'Update acceleration',
 			'settings.updateAccelerateSubtitle' => 'Use proxy to accelerate GitHub update links',
 			'settings.retryDownloadUntilSuccess' => 'Keep retrying failed downloads',
@@ -2161,10 +2165,10 @@ extension on TranslationsEnUs {
 			'reader.perComicReadMode' => 'Enable per-comic settings',
 			'reader.perComicReadModeSubtitle' => 'Only applies to the current comic',
 			'reader.perComicFollowGlobal' => 'Follow global',
-			'reader.perComicGlobalIs' => 'Global is',
-			'reader.perComicThisComic' => 'This comic',
 			_ => null,
 		} ?? switch (path) {
+			'reader.perComicGlobalIs' => 'Global is',
+			'reader.perComicThisComic' => 'This comic',
 			'reader.infoDisplay' => 'Info display',
 			'reader.pageNumber' => 'Page number',
 			'reader.pageNumberSubtitle' => 'Show current/total page count',
@@ -2675,10 +2679,10 @@ extension on TranslationsEnUs {
 			'discover.settings' => 'Settings',
 			'discover.pluginManagement' => 'Plugin Management',
 			'discover.customOrder' => 'Custom plugin order',
-			'discover.resetOrder' => 'Reset order',
-			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
 			_ => null,
 		} ?? switch (path) {
+			'discover.resetOrder' => 'Reset order',
+			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
 			'discover.pluginStore' => 'Plugin Store',
 			'discover.browseInstall' => 'Browse & Install',
 			'discover.noPluginForSearch' => 'No plugins available, cannot search',

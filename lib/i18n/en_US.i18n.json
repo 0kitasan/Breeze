@@ -153,6 +153,8 @@
     "proxyTypeSubtitle": "Choose proxy protocol",
     "proxyTypeHttp": "HTTP",
     "proxyTypeSocks5": "SOCKS5",
+    "blockPrivateNetwork": "Block private network",
+    "blockPrivateNetworkSubtitle": "Block requests to private / reserved addresses, including IP-direct fronting; off by default",
     "updateAccelerate": "Update acceleration",
     "updateAccelerateSubtitle": "Use proxy to accelerate GitHub update links",
     "retryDownloadUntilSuccess": "Keep retrying failed downloads",

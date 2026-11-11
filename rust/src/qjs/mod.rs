@@ -1607,6 +1607,20 @@ pub fn set_tls_verify_enabled(enabled: bool) -> Result<()> {
     configure_http_client(config).map_err(|err| anyhow!("设置 TLS 校验开关失败: {err}"))
 }
 
+/// 设置是否允许访问内网 / 保留地址段。
+///
+/// `true` 放行（默认），`false` 拦截。与 `set_tls_verify_enabled` 一样只改这一个
+/// 字段，配置变更会通过代际机制立刻同步到已加载的插件。
+pub fn set_allow_private_network(enabled: bool) -> Result<()> {
+    let mut config = current_http_client_config();
+    config.allow_private_network = enabled;
+    configure_http_client(config).map_err(|err| anyhow!("设置内网访问开关失败: {err}"))
+}
+
+pub fn is_allow_private_network() -> bool {
+    current_http_client_config().allow_private_network
+}
+
 pub fn set_http_requests_blocked(blocked: bool) -> Result<()> {
     set_http_requests_blocked_global(blocked);
     Ok(())

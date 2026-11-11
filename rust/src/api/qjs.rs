@@ -107,6 +107,17 @@ pub fn set_tls_verify_enabled(enabled: bool) -> Result<()> {
     crate::qjs::set_tls_verify_enabled(enabled)
 }
 
+/// 设置是否允许访问内网 / 保留地址段（默认允许）。
+#[frb(sync)]
+pub fn set_allow_private_network(enabled: bool) -> Result<()> {
+    crate::qjs::set_allow_private_network(enabled)
+}
+
+#[frb(sync)]
+pub fn is_allow_private_network() -> bool {
+    crate::qjs::is_allow_private_network()
+}
+
 #[frb(sync)]
 pub fn set_http_requests_blocked(blocked: bool) -> Result<()> {
     crate::qjs::set_http_requests_blocked(blocked)

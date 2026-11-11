@@ -556,6 +556,12 @@ class Translations$settings$zh_CN {
 	/// zh-CN: 'SOCKS5'
 	String get proxyTypeSocks5 => 'SOCKS5';
 
+	/// zh-CN: '内网拦截'
+	String get blockPrivateNetwork => '内网拦截';
+
+	/// zh-CN: '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭'
+	String get blockPrivateNetworkSubtitle => '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭';
+
 	/// zh-CN: '更新下载加速'
 	String get updateAccelerate => '更新下载加速';
 
@@ -4285,6 +4291,8 @@ extension on Translations {
 			'settings.proxyTypeSubtitle' => '选择代理协议',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.blockPrivateNetwork' => '内网拦截',
+			'settings.blockPrivateNetworkSubtitle' => '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭',
 			'settings.updateAccelerate' => '更新下载加速',
 			'settings.updateAccelerateSubtitle' => '开启后优先使用代理加速 GitHub 更新链接',
 			'settings.retryDownloadUntilSuccess' => '下载失败后持续重试',
@@ -4651,10 +4659,10 @@ extension on Translations {
 			'reader.perComicReadMode' => '启用本漫画设置',
 			'reader.perComicReadModeSubtitle' => '仅当前漫画生效',
 			'reader.perComicFollowGlobal' => '跟随全局',
-			'reader.perComicGlobalIs' => '全局为',
-			'reader.perComicThisComic' => '本漫',
 			_ => null,
 		} ?? switch (path) {
+			'reader.perComicGlobalIs' => '全局为',
+			'reader.perComicThisComic' => '本漫',
 			'reader.infoDisplay' => '信息项显示',
 			'reader.pageNumber' => '页数',
 			'reader.pageNumberSubtitle' => '显示当前页/总页数',
@@ -5165,10 +5173,10 @@ extension on Translations {
 			'discover.search' => '搜索',
 			'discover.settings' => '设置',
 			'discover.pluginManagement' => '插件管理',
-			'discover.customOrder' => '自定义插件顺序',
-			'discover.resetOrder' => '恢复默认顺序',
 			_ => null,
 		} ?? switch (path) {
+			'discover.customOrder' => '自定义插件顺序',
+			'discover.resetOrder' => '恢复默认顺序',
 			'discover.noPlugins' => '暂无可用插件，去插件商店安装一个吧~',
 			'discover.pluginStore' => '插件商店',
 			'discover.browseInstall' => '浏览安装',

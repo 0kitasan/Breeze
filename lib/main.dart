@@ -29,6 +29,7 @@ import 'package:zephyr/i18n/i18n_helper.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/i18n/system_locale_service.dart';
 import 'package:zephyr/network/http/wind_http.dart';
+import 'package:zephyr/util/network_policy.dart';
 import 'package:zephyr/util/proxy_setting.dart';
 import 'package:zephyr/network/sync/sync_device_id.dart';
 import 'package:zephyr/object_box/model.dart';
@@ -351,6 +352,9 @@ Future<(GlobalSettingCubit, PluginRegistryCubit)> _initServices() async {
   }
 
   applyProxySetting(globalSettingCubit.state.proxySetting);
+  applyPrivateNetworkPolicy(
+    blockPrivateNetwork: globalSettingCubit.state.blockPrivateNetwork,
+  );
 
   // 设置日志转发（包含flutter和qjs的日志）
   final logAddress = globalSettingCubit.state.logAddress;

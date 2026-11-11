@@ -184,8 +184,7 @@ class _ComicInfoState extends State<_ComicInfo>
     super.dispose();
   }
 
-  String get _readChapterComicKey =>
-      '${widget.from.trim()}:${_comicId.trim()}';
+  String get _readChapterComicKey => '${widget.from.trim()}:${_comicId.trim()}';
 
   void _onReadChaptersChanged(String comicKey) {
     if (!mounted) return;
