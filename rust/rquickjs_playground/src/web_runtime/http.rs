@@ -1,5 +1,6 @@
 use ::http::Extensions;
 use reqwest_middleware::ClientWithMiddleware;
+use std::sync::LazyLock;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HttpClientConfig {
@@ -74,10 +75,34 @@ impl Default for HttpClientState {
     }
 }
 
+static HTTP_PROMISE_CANCEL_SENDERS: LazyLock<Mutex<HashMap<u64, oneshot::Sender<()>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
 fn http_promise_cancel_senders() -> &'static Mutex<HashMap<u64, oneshot::Sender<()>>> {
-    static HTTP_PROMISE_CANCEL_SENDERS: OnceLock<Mutex<HashMap<u64, oneshot::Sender<()>>>> =
-        OnceLock::new();
-    HTTP_PROMISE_CANCEL_SENDERS.get_or_init(|| Mutex::new(HashMap::new()))
+    &HTTP_PROMISE_CANCEL_SENDERS
+}
+
+/// 分配一个全局 HTTP 请求 id（普通请求与前置探测共用同一 id 空间）。
+pub(crate) fn next_http_request_id() -> u64 {
+    HTTP_REQ_ID.fetch_add(1, Ordering::Relaxed)
+}
+
+/// 注册一个取消通道。调用方负责在请求结束后调用 [`unregister_http_cancel`]。
+pub(crate) fn register_http_cancel(id: u64) -> oneshot::Receiver<()> {
+    let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
+    http_promise_cancel_senders()
+        .lock()
+        .expect(&crate::tr!("failed-to-lock-http-promise-cancel-senders"))
+        .insert(id, cancel_tx);
+    cancel_rx
+}
+
+/// 移除取消通道。请求成功、失败或被取消后都必须调用，避免 sender 泄漏。
+pub(crate) fn unregister_http_cancel(id: u64) {
+    http_promise_cancel_senders()
+        .lock()
+        .expect(&crate::tr!("failed-to-lock-http-promise-cancel-senders"))
+        .remove(&id);
 }
 
 /// 当前挂起的 HTTP 取消 sender 数量（用于诊断/测试确认正常完成后被清理）。
@@ -88,8 +113,53 @@ pub fn http_promise_cancel_senders_len() -> usize {
         .unwrap_or(0)
 }
 
-pub(crate) fn http_io_sem() -> &'static Arc<Semaphore> {
-    HTTP_IO_SEM.get_or_init(|| Arc::new(Semaphore::new(HTTP_MAX_IN_FLIGHT)))
+/// 当前挂起的取消 sender 的请求 id。
+///
+/// 供测试断言「某个具体请求完成后 sender 被清掉」用——比较总数会被并行
+/// 用例的在途请求干扰。
+pub fn http_promise_cancel_senders_ids() -> Vec<u64> {
+    http_promise_cancel_senders()
+        .lock()
+        .map(|m| m.keys().copied().collect())
+        .unwrap_or_default()
+}
+
+/// runtime -> 在途 HTTP 请求信号量。
+///
+/// 用按插件分开的信号量而不是一个全局信号量：配额按插件隔离，一个插件把配额
+/// 用满只会让它自己的新请求排队，不会挤占别的插件。
+static HTTP_IO_SEMS: LazyLock<Mutex<HashMap<String, Arc<Semaphore>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// 取某个插件的在途请求信号量，没有就建一个。
+pub(crate) fn http_io_sem(runtime: &str) -> Arc<Semaphore> {
+    let mut sems = match HTTP_IO_SEMS.lock() {
+        Ok(sems) => sems,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    Arc::clone(
+        sems.entry(runtime.to_string())
+            .or_insert_with(|| Arc::new(Semaphore::new(HTTP_PER_PLUGIN_MAX_IN_FLIGHT))),
+    )
+}
+
+/// 回收某个插件的信号量（runtime 销毁时调用）。
+pub(crate) fn release_http_io_sem(runtime: &str) {
+    if let Ok(mut sems) = HTTP_IO_SEMS.lock() {
+        sems.remove(runtime);
+    }
+}
+
+/// 所有插件当前可用配额之和，供 `__runtime_stats()` 展示。
+pub(crate) fn http_io_available_permits() -> usize {
+    match HTTP_IO_SEMS.lock() {
+        Ok(sems) => sems.values().map(|sem| sem.available_permits()).sum(),
+        Err(poisoned) => poisoned
+            .into_inner()
+            .values()
+            .map(|sem| sem.available_permits())
+            .sum(),
+    }
 }
 
 pub(crate) fn cleanup_stale_pending(
@@ -258,11 +328,19 @@ fn http_client_state_cell() -> &'static Mutex<HttpClientState> {
     HTTP_CLIENT_STATE.get_or_init(|| Mutex::new(HttpClientState::default()))
 }
 
+/// HTTP 配置代际：`configure_http_client` 每次更新 +1。
+///
+/// 线程本地缓存（[`WORKER_HTTP_CONFIG`]）靠它判断是否过期。没有它的话，
+/// QJS runtime 线程在创建时拍下的配置会一直用下去，用户改代理 / 改内网策略
+/// 后已加载的插件不生效，必须重建 runtime 才行。
+static HTTP_CONFIG_GENERATION: AtomicU64 = AtomicU64::new(0);
+
 pub fn configure_http_client(config: HttpClientConfig) -> AnyResult<()> {
     let mut state = http_client_state_cell()
         .lock()
         .map_err(|_| anyhow!(crate::tr!("http-client-state-lock-is-poisoned")))?;
     state.config = config;
+    HTTP_CONFIG_GENERATION.fetch_add(1, Ordering::Release);
     Ok(())
 }
 
@@ -274,18 +352,40 @@ pub fn current_http_client_config() -> HttpClientConfig {
 }
 
 thread_local! {
-    static WORKER_HTTP_CONFIG: std::cell::RefCell<Option<HttpClientConfig>> = const { std::cell::RefCell::new(None) };
+    /// 线程本地的 HTTP 配置：(拍下时的代际, 配置, 是否钉住)。
+    ///
+    /// `pinned = true` 表示调用方显式指定过配置（runtime 创建时快照，或把配置
+    /// 带到 tokio 任务线程），后续全局变更不影响它。
+    static WORKER_HTTP_CONFIG: std::cell::RefCell<Option<(u64, HttpClientConfig, bool)>> =
+        const { std::cell::RefCell::new(None) };
 }
 
+/// 显式钉住当前线程的配置，后续全局变更不影响它。
+///
+/// 两个用途：runtime 创建时快照（默认行为），以及把配置从 QJS 线程带到
+/// tokio 任务线程——任务内要的就是拍下的那份。
 pub fn set_worker_http_config(config: HttpClientConfig) {
-    WORKER_HTTP_CONFIG.with(|c| *c.borrow_mut() = Some(config));
+    let generation = HTTP_CONFIG_GENERATION.load(Ordering::Acquire);
+    WORKER_HTTP_CONFIG.with(|c| *c.borrow_mut() = Some((generation, config, true)));
 }
 
-fn worker_http_config() -> HttpClientConfig {
+/// 取当前线程的配置。
+///
+/// 钉住时直接返回；否则按代际判断，过时就从全局重新拉一份。后者让
+/// `configure_http_client` 之后已存在的 QJS runtime 线程也能看到新配置，
+/// 不需要重建 runtime。
+pub(crate) fn worker_http_config() -> HttpClientConfig {
+    let generation = HTTP_CONFIG_GENERATION.load(Ordering::Acquire);
     WORKER_HTTP_CONFIG.with(|c| {
-        c.borrow()
-            .clone()
-            .unwrap_or_else(current_http_client_config)
+        let mut slot = c.borrow_mut();
+        if let Some((cached, config, pinned)) = slot.as_ref()
+            && (*pinned || *cached == generation)
+        {
+            return config.clone();
+        }
+        let config = current_http_client_config();
+        *slot = Some((generation, config.clone(), false));
+        config
     })
 }
 
@@ -399,14 +499,9 @@ pub fn http_request_promise(
     body: Option<String>,
     body_native_buffer_id: Option<u64>,
 ) -> rquickjs::Result<QjsValue<'_>> {
-    let id = HTTP_REQ_ID.fetch_add(1, Ordering::Relaxed);
-    let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
-    {
-        let mut senders = http_promise_cancel_senders()
-            .lock()
-            .expect(&crate::tr!("failed-to-lock-http-promise-cancel-senders"));
-        senders.insert(id, cancel_tx);
-    }
+    let runtime = runtime_scope(&ctx);
+    let id = next_http_request_id();
+    let cancel_rx = register_http_cancel(id);
 
     // 实际 HTTP 请求放进独立 tokio 任务，由 tokio 的 I/O 驱动直接轮询，
     // 不经过 rquickjs 的 Spawner（那会被 JS 事件泵以固定节奏轮询，导致
@@ -416,9 +511,10 @@ pub fn http_request_promise(
     // 设置会不一致。
     let work_cfg = worker_http_config();
     let cleanup_id = id;
+    // 在途配额按插件隔离：先取本插件的信号量，再进异步任务。
+    let sem = http_io_sem(&runtime);
     let work = async move {
         set_worker_http_config(work_cfg);
-        let sem = Arc::clone(http_io_sem());
         let permit = match timeout(Duration::from_secs(15), sem.acquire_owned()).await {
             Ok(Ok(permit)) => permit,
             Ok(Err(_)) => {
@@ -441,18 +537,15 @@ pub fn http_request_promise(
                 })
                 .to_string())
             }
-            r = http_request_inner_async(method, url, headers_json, body, body_native_buffer_id) => r,
+            r = http_request_inner_async(runtime, method, url, headers_json, body, body_native_buffer_id) => r,
         };
 
         drop(permit);
 
-        // 请求已结束（成功、失败或被取消），从 map 移除取消 sender，
+        // 请求已结束（成功、失败或被取消），移除取消 sender，
         // 否则每个完成的请求都会在 http_promise_cancel_senders 里留下
         // 一个永远不会被删除的悬空 sender，长会话内存持续增长。
-        http_promise_cancel_senders()
-            .lock()
-            .expect(&crate::tr!("failed-to-lock-http-promise-cancel-senders"))
-            .remove(&cleanup_id);
+        unregister_http_cancel(cleanup_id);
 
         match result {
             Ok(payload) => payload,
@@ -474,7 +567,7 @@ pub fn http_request_promise(
     let promise = Promise::wrap_future(&ctx, future)?;
     let obj = promise.into_inner();
     if let Err(e) = obj.set("__hostRequestId", id) {
-        http_promise_cancel_senders().lock().unwrap().remove(&id);
+        unregister_http_cancel(id);
         return Err(e);
     }
     Ok(obj.into_value())
@@ -502,6 +595,7 @@ pub fn http_request_cancel(id: u64) -> String {
 /// body 读取由 tokio 的 I/O 直接驱动，和直连一致。
 
 async fn http_request_inner_async(
+    runtime: String,
     method: String,
     url: String,
     headers_json: String,
@@ -514,7 +608,7 @@ async fn http_request_inner_async(
     // 域名前置：命中前置表的请求会被改写成「连真实 IP + 不发 SNI + 带 Host 头」。
     // 必须在校验目标之前完成改写，否则会先对墙内解析不到的域名做一次 DNS 查询。
     // feature 关闭时该调用被编译成直接返回 None，热路径没有额外开销。
-    let front_target = resolve_front_target(&url)?;
+    let front_target = resolve_front_target(&runtime, &url)?;
     let request_url = match &front_target {
         Some(target) => super::fronting::front_url_with_ip(&url, &target.ip)?,
         None => url.clone(),
@@ -585,17 +679,29 @@ async fn http_request_inner_async(
         builder = builder.body(content);
     }
 
+    // 计时起点放在 `send()` 之前：`ttfbMs` 因此包含 TCP 建连 + TLS 握手 +
+    // 服务端处理 + 首字节，与 `__http_probe_front_hosts` 的 `ttfbMs` 同义。
+    let request_started = Instant::now();
+
     // 连接级失败才把 IP 标记为不健康：4xx/5xx 说明这个 IP 活着，
     // 只是请求被站点拒绝（风控 / 限流），换 IP 也未必有用。
     let response = match builder.send().await {
         Ok(response) => response,
         Err(error) => {
             if let Some(target) = &front_target {
-                super::fronting::mark_front_host_unhealthy(&target.ip);
+                super::fronting::mark_front_host_unhealthy(&runtime, &target.ip);
             }
             return Err(error).context(crate::tr!("failed-to-send-http-request"));
         }
     };
+    let ttfb = request_started.elapsed();
+    // 实际 TCP 对端的 IP：未前置时是 DNS 解析结果，走代理时是代理地址，
+    // 前置时就是表里的那个 IP。必须在 `bytes()` 消费掉 response 之前取。
+    // 非 TCP 传输（unix socket / 命名管道）拿不到，为 None。
+    let peer_ip = response
+        .remote_addr()
+        .map(|addr| addr.ip().to_string())
+        .unwrap_or_default();
     let status = response.status();
     // 回报给 JS 的 URL 始终是原始域名 URL：插件要按域名做缓存 / 去重 /
     // 重定向判定，不应该看到直连 IP。实际 IP 另附在 frontHost / frontIp 字段里。
@@ -612,11 +718,15 @@ async fn http_request_inner_async(
         headers_map.insert(name.to_string(), Value::String(value_text));
     }
 
+    // body 计时只算「收到响应头 → body 读完」，不含建连与首字节，
+    // 所以 `offloadedBytes / bodyMs` 就是这次请求的实际吞吐，不受 RTT 干扰。
+    let body_started = Instant::now();
     let body_bytes = response
         .bytes()
         .await
         .context(crate::tr!("failed-to-read-http-response-body-bytes"))?
         .to_vec();
+    let body_elapsed = body_started.elapsed();
 
     let native_buffer_id = NATIVE_BUF_ID.fetch_add(1, Ordering::Relaxed);
     let body_len = body_bytes.len();
@@ -646,7 +756,15 @@ async fn http_request_inner_async(
         "body": "",
         "offloaded": true,
         "nativeBufferId": native_buffer_id,
-        "offloadedBytes": body_len
+        "offloadedBytes": body_len,
+        // TCP 对端 IP。未前置时就是域名解析到的地址，插件可以用它观察
+        // DNS 实际选中的 IP；走代理时是代理地址，不能当成目标 IP 用。
+        "peerIp": peer_ip,
+        // 计时信息交给插件自行判断：宿主只测量，不做优选决策。
+        // `ttfbMs` 含建连/握手/首字节；`bodyMs` 只含 body 传输；
+        // 吞吐 ≈ offloadedBytes / bodyMs（小响应会被 RTT 主导，插件应自己设门槛）。
+        "ttfbMs": ttfb.as_millis() as u64,
+        "bodyMs": body_elapsed.as_millis() as u64
     });
     // 调试信息：本次请求是否走了域名前置，以及实际连的哪个 IP。
     if let Some(target) = &front_target {
@@ -678,12 +796,18 @@ fn front_host_header_value(host: &str, request_url: &str) -> String {
 /// `host-fronting` 关闭时直接返回 `None`，避免在每次请求的热路径上做
 /// URL 解析与全局状态加锁。
 #[cfg(feature = "host-fronting")]
-fn resolve_front_target(url: &str) -> AnyResult<Option<super::fronting::FrontTarget>> {
-    super::fronting::resolve_front_target(url)
+fn resolve_front_target(
+    runtime: &str,
+    url: &str,
+) -> AnyResult<Option<super::fronting::FrontTarget>> {
+    super::fronting::resolve_front_target(runtime, url)
 }
 
 #[cfg(not(feature = "host-fronting"))]
-fn resolve_front_target(_url: &str) -> AnyResult<Option<super::fronting::FrontTarget>> {
+fn resolve_front_target(
+    _runtime: &str,
+    _url: &str,
+) -> AnyResult<Option<super::fronting::FrontTarget>> {
     Ok(None)
 }
 
@@ -740,8 +864,48 @@ fn is_private_or_local_ipv4(ip: Ipv4Addr) -> bool {
         || (a == 100 && (64..=127).contains(&b))
 }
 
-fn is_private_or_local_ipv6(ip: Ipv6Addr) -> bool {
-    ip.is_loopback() || ip.is_unspecified() || ip.is_unique_local() || ip.is_unicast_link_local()
+/// IPv6 内网 / 保留地址判断。
+///
+/// 除了直接的本地地址段，还必须处理**把 IPv4 内嵌在 IPv6 里**的几种形式：
+/// 它们的 `is_loopback` / `is_unique_local` 全部返回 false，不单独判断就能
+/// 绕过内网拦截（`::ffff:127.0.0.1` 打到本机、`::ffff:169.254.169.254` 打到
+/// 云元数据服务）。
+pub(crate) fn is_private_or_local_ipv6(ip: Ipv6Addr) -> bool {
+    // 本地段先判，避免被下面的内嵌分支提前返回。
+    if ip.is_loopback()
+        || ip.is_unspecified()
+        || ip.is_unique_local()
+        || ip.is_unicast_link_local()
+        || ip.is_multicast()
+    {
+        return true;
+    }
+    // IPv4-mapped：::ffff:0:0/96
+    if let Some(v4) = ip.to_ipv4_mapped() {
+        return is_private_or_local_ipv4(v4);
+    }
+    // 6to4 / NAT64：IPv4 内嵌在地址里，同样要按 IPv4 规则判。
+    if let Some(v4) = embedded_ipv4(ip) {
+        return is_private_or_local_ipv4(v4);
+    }
+    false
+}
+
+/// 取出 6to4 / NAT64 地址里内嵌的 IPv4。
+fn embedded_ipv4(ip: Ipv6Addr) -> Option<Ipv4Addr> {
+    let segments = ip.segments();
+    let octets = ip.octets();
+    // 6to4：2002:AABB:CCDD::/48，AABB:CCDD 就是 IPv4 的前两段。
+    if segments[0] == 0x2002 {
+        return Some(Ipv4Addr::new(octets[2], octets[3], octets[4], octets[5]));
+    }
+    // NAT64：64:ff9b::/96，后 32 位是 IPv4。
+    if segments[..6] == [0x0064, 0xff9b, 0, 0, 0, 0] {
+        return Some(Ipv4Addr::new(
+            octets[12], octets[13], octets[14], octets[15],
+        ));
+    }
+    None
 }
 
 #[cfg(test)]
@@ -764,6 +928,203 @@ mod tests {
         let error = result.expect_err("blocked request should fail");
         assert!(error.is_middleware());
         assert!(error.to_string().contains("HTTP"));
+    }
+
+    /// 未钉住且代际过期的缓存要被丢弃，回落到全局配置。
+    ///
+    /// 这就是「用户改代理 / 改内网策略后已加载插件立刻生效」的机制。
+    #[test]
+    fn stale_unpinned_worker_config_is_refreshed() {
+        let global = current_http_client_config();
+
+        // 伪造一份「代际过期、未钉住」的缓存，内容故意和全局不同。
+        WORKER_HTTP_CONFIG.with(|c| {
+            let mut stale = global.clone();
+            stale.allow_private_network = !global.allow_private_network;
+            *c.borrow_mut() = Some((u64::MAX, stale, false));
+        });
+
+        assert_eq!(worker_http_config(), global);
+    }
+
+    /// 钉住的配置不受代际影响（测试靠这个语义：临时改全局后建 runtime，
+    /// 再把全局恢复，runtime 仍用快照那份）。
+    #[test]
+    fn pinned_worker_config_ignores_stale_generation() {
+        let mut pinned = current_http_client_config();
+        pinned.allow_private_network = !pinned.allow_private_network;
+        set_worker_http_config(pinned.clone());
+
+        // 推进代际（不改全局，其他线程重读到的仍是同一份配置）。
+        HTTP_CONFIG_GENERATION.fetch_add(1, Ordering::Release);
+
+        assert_eq!(worker_http_config(), pinned);
+    }
+
+    /// IPv4 内嵌在 IPv6 里的形式必须按 IPv4 规则拦截，否则能绕过内网检查。
+    #[test]
+    fn ipv6_embedded_ipv4_forms_are_blocked() {
+        for addr in [
+            "::1",
+            "::",
+            "fc00::1",
+            "fe80::1",
+            "ff02::1",
+            // IPv4-mapped ::ffff:0:0/96
+            "::ffff:127.0.0.1",
+            "::ffff:10.0.0.1",
+            "::ffff:192.168.1.1",
+            "::ffff:169.254.169.254",
+            "::ffff:100.64.0.1",
+            // 6to4 2002::/16
+            "2002:7f00:0001::",
+            "2002:0a00:0001::",
+            "2002:a9fe:a9fe::",
+            // NAT64 64:ff9b::/96
+            "64:ff9b::7f00:1",
+            "64:ff9b::a00:1",
+            "64:ff9b::a9fe:a9fe",
+        ] {
+            let ip: Ipv6Addr = addr.parse().expect("test address should parse");
+            assert!(is_private_or_local_ipv6(ip), "{addr} should be blocked");
+        }
+    }
+
+    #[test]
+    fn ipv6_public_addresses_are_allowed() {
+        for addr in [
+            "2606:4700:3032::6815:2dee",
+            "2001:4860:4860::8888",
+            // 6to4 包裹公网 IPv4 不算内网
+            "2002:6814:200f::",
+        ] {
+            let ip: Ipv6Addr = addr.parse().expect("test address should parse");
+            assert!(!is_private_or_local_ipv6(ip), "{addr} should be allowed");
+        }
+    }
+
+    /// 响应负载必须带上计时与字节数，插件靠这些字段自己做 IP 优选。
+    #[test]
+    fn response_payload_carries_timing_and_size() {
+        let (base_url, tx, handle) = crate::tests::spawn_test_server(1);
+        let script = format!(
+            r#"
+              (async () => {{
+                const raw = await __http_request_promise(
+                  "GET", "{base_url}/echo", "{{}}", null, null
+                );
+                const data = JSON.parse(raw);
+                return JSON.stringify({{
+                  ok: data.ok,
+                  bytes: data.offloadedBytes,
+                  ttfbIsNumber: typeof data.ttfbMs === "number",
+                  bodyIsNumber: typeof data.bodyMs === "number",
+                  ttfbMs: data.ttfbMs,
+                  bodyMs: data.bodyMs
+                }});
+              }})()
+            "#
+        );
+
+        let result = crate::tests::run_async_script(&script).expect("script should run");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&result).expect("result should be JSON");
+
+        assert_eq!(parsed["ok"], serde_json::json!(true));
+        assert_eq!(parsed["ttfbIsNumber"], serde_json::json!(true));
+        assert_eq!(parsed["bodyIsNumber"], serde_json::json!(true));
+        assert!(
+            parsed["bytes"].as_u64().unwrap_or(0) > 0,
+            "offloadedBytes should be the body size: {parsed:?}"
+        );
+
+        let _ = tx.send(());
+        let _ = handle.join();
+    }
+
+    /// `fetch()` 得到的 Response 要能拿到宿主侧的测量信息（`hostMeta`）。
+    #[test]
+    fn response_host_meta_is_exposed_to_js() {
+        let (base_url, tx, handle) = crate::tests::spawn_test_server(1);
+        let script = format!(
+            r#"
+              (async () => {{
+                const res = await fetch("{base_url}/echo");
+                const bytes = (await res.arrayBuffer()).byteLength;
+                const meta = res.hostMeta;
+                return JSON.stringify({{
+                  hasMeta: meta !== null && typeof meta === "object",
+                  bytes: meta && meta.bytes,
+                  bodyLength: bytes,
+                  ttfbIsNumber: meta && typeof meta.ttfbMs === "number",
+                  bodyIsNumber: meta && typeof meta.bodyMs === "number",
+                  ip: meta && meta.ip,
+                  host: meta && meta.host,
+                  peerIp: meta && meta.peerIp
+                }});
+              }})()
+            "#
+        );
+
+        let result = crate::tests::run_async_script(&script).expect("script should run");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&result).expect("result should be JSON");
+
+        assert_eq!(parsed["hasMeta"], serde_json::json!(true));
+        assert_eq!(parsed["ttfbIsNumber"], serde_json::json!(true));
+        assert_eq!(parsed["bodyIsNumber"], serde_json::json!(true));
+        assert_eq!(
+            parsed["bytes"].as_u64(),
+            parsed["bodyLength"].as_u64(),
+            "hostMeta.bytes should match the body length: {parsed:?}"
+        );
+        // 未走前置时没有前置 IP / 域名，但 TCP 对端 IP 必须能拿到。
+        assert_eq!(parsed["ip"], serde_json::json!(null));
+        assert_eq!(parsed["host"], serde_json::json!(null));
+        assert_eq!(
+            parsed["peerIp"],
+            serde_json::json!("127.0.0.1"),
+            "peerIp should be the resolved address of the test server: {parsed:?}"
+        );
+
+        let _ = tx.send(());
+        let _ = handle.join();
+    }
+
+    /// 在途配额按插件隔离：占满 A 的许可不影响 B。
+    #[test]
+    fn http_io_sem_is_per_runtime() {
+        let runtime_a = "test-http-quota-a";
+        let runtime_b = "test-http-quota-b";
+        release_http_io_sem(runtime_a);
+        release_http_io_sem(runtime_b);
+
+        let a = http_io_sem(runtime_a);
+        let b = http_io_sem(runtime_b);
+        assert_eq!(a.available_permits(), HTTP_PER_PLUGIN_MAX_IN_FLIGHT);
+        assert_eq!(b.available_permits(), HTTP_PER_PLUGIN_MAX_IN_FLIGHT);
+
+        // 同一个 runtime 拿到的是同一个信号量，否则配额形同虚设。
+        let a_again = http_io_sem(runtime_a);
+        assert!(Arc::ptr_eq(&a, &a_again));
+
+        // 占用 A 的配额不影响 B。
+        let permit = a
+            .clone()
+            .try_acquire_owned()
+            .expect("A should have a permit");
+        assert_eq!(a.available_permits(), HTTP_PER_PLUGIN_MAX_IN_FLIGHT - 1);
+        assert_eq!(b.available_permits(), HTTP_PER_PLUGIN_MAX_IN_FLIGHT);
+        drop(permit);
+
+        // 回收后重建拿到的是全新配额。
+        release_http_io_sem(runtime_a);
+        let a_fresh = http_io_sem(runtime_a);
+        assert!(!Arc::ptr_eq(&a, &a_fresh));
+        assert_eq!(a_fresh.available_permits(), HTTP_PER_PLUGIN_MAX_IN_FLIGHT);
+
+        release_http_io_sem(runtime_a);
+        release_http_io_sem(runtime_b);
     }
 
     #[test]

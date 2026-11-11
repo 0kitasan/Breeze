@@ -47,6 +47,8 @@ mod bridge_crypto;
 mod crypto_ops;
 mod fs_ops;
 // feature 关闭时 http 热路径不会调用本模块的解析函数，显式关掉 dead_code 告警。
+#[cfg(feature = "host-fronting")]
+mod front_probe;
 #[cfg_attr(not(feature = "host-fronting"), allow(dead_code))]
 mod fronting;
 mod http;
@@ -61,12 +63,14 @@ pub use self::bridge::{
     register_bridge_route_async_handler, register_bridge_route_blocking_handler,
     register_bridge_route_sync_handler, unregister_bridge_route_handler,
 };
+#[cfg(feature = "host-fronting")]
+pub use self::front_probe::probe_front_hosts;
 pub use self::fronting::{clear_front_hosts, get_front_hosts, set_front_hosts};
 pub use self::http::{
     BuildHttpClientOptions, HttpClientConfig, build_http_client, build_http_client_ex,
-    configure_http_client, current_http_client_config, http_promise_cancel_senders_len,
-    http_request_cancel, http_request_promise, is_http_requests_blocked, set_http_requests_blocked,
-    set_worker_http_config, wrap_http_client,
+    configure_http_client, current_http_client_config, http_promise_cancel_senders_ids,
+    http_promise_cancel_senders_len, http_request_cancel, http_request_promise,
+    is_http_requests_blocked, set_http_requests_blocked, set_worker_http_config, wrap_http_client,
 };
 pub use self::native_buffer::{
     native_buffer_clone_raw, native_buffer_clone_typed, native_buffer_free, native_buffer_put,
@@ -86,8 +90,9 @@ use self::fs_ops::{
     fs_read_file, fs_readdir, fs_readlink, fs_realpath, fs_rename, fs_rm, fs_stat, fs_symlink,
     fs_task_dispatch, fs_truncate, fs_unlink, fs_utimes, fs_write_file, fs_write_file_native,
 };
+pub(crate) use self::http::release_http_io_sem;
 use self::http::{
-    HttpClientState, cleanup_stale_pending, cleanup_stale_pending_abort, http_io_sem,
+    HttpClientState, cleanup_stale_pending, cleanup_stale_pending_abort, http_io_available_permits,
 };
 use self::native_buffer::{
     NATIVE_BUF_ID, native_buffer_put_bytes, native_pool, start_native_buffer_gc_loop,
@@ -188,6 +193,38 @@ pub fn polyfill_script(options: WebRuntimeOptions) -> String {
     script
 }
 
+/// 当前 QJS runtime（插件）的标识，存在 runtime userdata 里。
+///
+/// 用 userdata 而不是 JS 全局变量，避免插件篡改后访问别的插件的前置表。
+#[derive(Clone, rquickjs::JsLifetime)]
+struct WebRuntimeScope(String);
+
+/// 读取当前 runtime 的作用域标识。
+///
+/// 正常路径下 userdata 一定存在：`install_host_bindings` 写入失败会直接返回错误，
+/// 而前置/探测相关的全局函数是在写入**之后**才注册的，所以「能调用到这些函数」
+/// 就等价于「userdata 一定在」。这里的兜底分支实际不可达，仅用于避免 unwrap。
+fn runtime_scope(ctx: &Ctx<'_>) -> String {
+    ctx.userdata::<WebRuntimeScope>()
+        .map(|scope| scope.0.clone())
+        .unwrap_or_else(|| "unidentified-runtime".to_string())
+}
+
+#[cfg(feature = "host-fronting")]
+fn set_front_hosts_scoped(ctx: Ctx<'_>, payload: String) -> String {
+    set_front_hosts(&runtime_scope(&ctx), payload)
+}
+
+#[cfg(feature = "host-fronting")]
+fn get_front_hosts_scoped(ctx: Ctx<'_>) -> String {
+    get_front_hosts(&runtime_scope(&ctx))
+}
+
+#[cfg(feature = "host-fronting")]
+fn clear_front_hosts_scoped(ctx: Ctx<'_>) -> String {
+    clear_front_hosts(&runtime_scope(&ctx))
+}
+
 pub fn install_host_bindings(
     ctx: &Ctx<'_>,
     runtime_name: &str,
@@ -200,7 +237,13 @@ pub fn install_host_bindings(
             crate::tr!("current-build-does-not-enable-the-host-fs-cargo"),
         ));
     }
+    // 前置表 key 用未截断的原始 runtime name，避免 normalize 截断/替换字符后
+    // 两个不同插件落到同一个 key。
+    let runtime_scope_name = runtime_name.to_string();
     let runtime_name = normalize_runtime_name(runtime_name);
+    // 写入失败就直接放弃初始化，而不是带着缺失的 scope 继续注册全局函数：
+    // 那样所有插件会退化到同一个兜底 key，前置表隔离静默失效。
+    ctx.store_userdata(WebRuntimeScope(runtime_scope_name))?;
     let globals = ctx.globals();
     globals.set(
         "__http_request_promise",
@@ -208,15 +251,24 @@ pub fn install_host_bindings(
     )?;
     globals.set("__http_request_cancel", Func::from(http_request_cancel))?;
     // 域名前置（IP 直连）能力：插件把 host -> IP 表下发给宿主，
-    // 宿主据此把请求改写为「连 IP + 不发 SNI + Host 头 + 强制 HTTP/1.1」。
-    // 通过 cargo feature `host-fronting` 控制（默认关闭）；关闭时不注册这三个全局函数，
+    // 宿主据此把请求改写为「连 IP + 不发 SNI + Host + 强制 HTTP/1.1」。
+    // 通过 cargo feature `host-fronting` 控制；关闭时不注册这些全局函数，
     // 插件探测到缺失即视为「宿主不支持」，与未打补丁的行为完全一致。
+    // 前置表按 runtime（插件）隔离，作用域从 runtime userdata 读取。
     #[cfg(feature = "host-fronting")]
-    globals.set("__http_set_front_hosts", Func::from(set_front_hosts))?;
+    globals.set("__http_set_front_hosts", Func::from(set_front_hosts_scoped))?;
     #[cfg(feature = "host-fronting")]
-    globals.set("__http_get_front_hosts", Func::from(get_front_hosts))?;
+    globals.set("__http_get_front_hosts", Func::from(get_front_hosts_scoped))?;
     #[cfg(feature = "host-fronting")]
-    globals.set("__http_clear_front_hosts", Func::from(clear_front_hosts))?;
+    globals.set(
+        "__http_clear_front_hosts",
+        Func::from(clear_front_hosts_scoped),
+    )?;
+    #[cfg(feature = "host-fronting")]
+    globals.set(
+        "__http_probe_front_hosts",
+        Function::new(ctx.clone(), probe_front_hosts)?,
+    )?;
     globals.set("__urlsp_rewrite", Func::from(urlsp_rewrite))?;
     globals.set("__urlsp_query", Func::from(urlsp_query))?;
     globals.set("__headers_rewrite", Func::from(headers_rewrite))?;
@@ -429,7 +481,6 @@ static FS_REQ_POOL: OnceLock<Mutex<HashMap<u64, PendingTask>>> = OnceLock::new()
 static TIMER_REQ_ID: AtomicU64 = AtomicU64::new(1);
 static TIMER_REQ_EVENT_POOL: OnceLock<Mutex<HashMap<u64, PendingAbortTask>>> = OnceLock::new();
 static HTTP_CLIENT_STATE: OnceLock<Mutex<HttpClientState>> = OnceLock::new();
-static HTTP_IO_SEM: OnceLock<Arc<Semaphore>> = OnceLock::new();
 static FS_IO_SEM: OnceLock<Arc<Semaphore>> = OnceLock::new();
 static HTTP_EVENT_CANCELED: AtomicU64 = AtomicU64::new(0);
 static BRIDGE_STALE_DROPS: AtomicU64 = AtomicU64::new(0);
@@ -564,7 +615,11 @@ fn timer_req_event_pool() -> &'static Mutex<HashMap<u64, PendingAbortTask>> {
     TIMER_REQ_EVENT_POOL.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-const HTTP_MAX_IN_FLIGHT: usize = 256;
+/// 每个插件（runtime）各自的在途 HTTP 请求上限。
+///
+/// 与探测配额一致：按插件隔离，不设全局闸门。数值沿用原来的全局上限，
+/// 所以单个插件的能力不变，只是不再被别的插件挤占。
+const HTTP_PER_PLUGIN_MAX_IN_FLIGHT: usize = 256;
 const FS_MAX_IN_FLIGHT: usize = 128;
 const HTTP_FORMDATA_BODY_HEADER: &str = "x-rquickjs-host-body-formdata-v1";
 const BRIDGE_MAX_PENDING: usize = 4096;
@@ -1311,7 +1366,7 @@ pub fn runtime_stats() -> String {
         cleanup_stale_fetch_state(&mut pool);
     }
 
-    let http_available = http_io_sem().available_permits();
+    let http_available = http_io_available_permits();
     let fs_available = fs_io_sem().available_permits();
     let native_buffer_pool_size = native_pool().lock().map(|m| m.len()).unwrap_or_default();
     let bridge_config = current_bridge_runtime_config();
@@ -1323,7 +1378,9 @@ pub fn runtime_stats() -> String {
                 "fs": FS_MAX_PENDING,
             },
             "inFlight": {
-                "http": HTTP_MAX_IN_FLIGHT,
+                // http 是**按插件**的上限，fs 仍是全局上限。
+                "http": HTTP_PER_PLUGIN_MAX_IN_FLIGHT,
+                "httpScope": "per-plugin",
                 "fs": FS_MAX_IN_FLIGHT,
             }
         },
