@@ -36,6 +36,8 @@ class _ReaderSettingsReadTab extends StatelessWidget {
           const _PreloadSection(),
           const SizedBox(height: 18),
           const _ReadExperienceSection(),
+          const SizedBox(height: 18),
+          const ReaderScrollExperimentSwitch(),
         ],
       ),
     );
