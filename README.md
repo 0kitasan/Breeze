@@ -24,7 +24,7 @@
 
 ## 项目开发指南
 
-插件开发相关文档请参阅：<https://deretame.github.io/plugin-dev-docs/>
+插件开发相关文档请参阅：<https://breeze-project-org.github.io/plugin-dev-docs/>
 
 插件列表：<https://github.com/deretame/Breeze-plugin-list>
 
