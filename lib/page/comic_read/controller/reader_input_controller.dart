@@ -81,6 +81,8 @@ class ReaderInputController {
       isColumnReadMode(context.readEffectiveReadMode()) &&
       (_activeTouchPointers.isNotEmpty || _zoomedScrollHandoff.isActive);
 
+  bool get continuousScrollEnabled => zoomedContinuousScrollEnabled.value;
+
   void _onExperimentChanged() {
     _zoomedScrollHandoff.cancel();
     if (context.mounted) onRefreshState();
@@ -109,6 +111,10 @@ class ReaderInputController {
               : null,
           onDoubleTap: isDoubleTapActionEnabled ? _onDoubleTap : null,
           child: InteractiveViewer(
+            panAxis: continuousScrollEnabled &&
+                    isColumnReadMode(readSetting.readMode)
+                ? PanAxis.horizontal
+                : PanAxis.free,
             transformationController: transformationController,
             boundaryMargin: EdgeInsets.zero,
             minScale: kMinReaderScale,
