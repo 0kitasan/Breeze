@@ -13,6 +13,7 @@ extension _ComicReadInitPart on _ComicReadPageState {
       context: context,
       readerCubit: context.read<ReaderCubit>(),
       pageController: _pageController,
+      scrollController: scrollController,
       transformationController: _transformationController,
       onToggleMenu: _toggleVisibility,
       onToggleDesktopFullscreen: _lifecycleController.toggleDesktopFullscreen,
