@@ -35,8 +35,8 @@
 
 ### 2.1 Flutter / Dart
 
-- **Flutter 版本**：`3.47.6`（通过 `.fvmrc` 与 `.puro.json` 锁定，建议使用 FVM / Puro）
-- **Dart SDK**：`^3.12.0`（见 `pubspec.yaml` 的 `environment`）
+- **Flutter 版本**：`3.50.0`（通过 `.fvmrc` 与 `.puro.json` 锁定，建议使用 FVM / Puro）
+- **Dart SDK**：`^3.14.0`（见 `pubspec.yaml` 的 `environment`）
 - **应用包名**：`zephyr`
 
 ### 2.2 Rust
@@ -143,7 +143,7 @@ page/comic_info/
 
 ### 4.1 必需工具链
 
-- **Flutter SDK**：`3.47.6`（通过 `.fvmrc` 与 `.puro.json` 锁定，建议使用 FVM / Puro）
+- **Flutter SDK**：`3.50.0`（通过 `.fvmrc` 与 `.puro.json` 锁定，建议使用 FVM / Puro）
 - **Rust Toolchain**：通过 `rustup` 安装，并添加目标平台 target（无 `rust-toolchain.toml`，跟随 stable）
 - **LLVM / Clang**：`rustqjs` 等库需要解析 C 头，Windows 推荐 `choco install llvm`
 - **Java 21**：Android / Windows / Linux 编译必需

@@ -4,7 +4,7 @@ publish_to: none
 version: 3.0.37+2225
 
 environment:
-  sdk: ^3.12.0
+  sdk: ^3.14.0
 
 dependencies:
   # 核心依赖
@@ -63,7 +63,15 @@ dependencies:
   pool: ^1.5.2 # 工具: 并发资源池
   window_manager: ^0.5.1 # 桌面: 窗口控制
   screen_retriever: ^0.2.2 # 桌面: 屏幕信息
-  tray_manager: ^0.8.0 # 桌面: 系统托盘
+  # 桌面: 系统托盘
+  # 走 git 锁定：pub 上的 0.8.3 仍锁 nativeapi ^0.5.9，而 nativeapi 0.5.x 的
+  # 主入口连带导出实验性 runNativeApp（依赖 Dart 3.14 已移除的 Isolate.create），
+  # 在 Flutter 3.50 上编译直接失败。上游 main 已改为 nativeapi ^0.6.0（待发版），
+  # 这里钉到该 commit；等 tray_manager 正式发版后换回 ^0.8.x。
+  tray_manager:
+    git:
+      url: https://github.com/leanflutter/tray_manager.git
+      ref: 7863f4a75b0e828428e33431ab9aa2f0798dd885
   win32: ^6.0.1 # 平台: Windows API
   battery_plus: ^7.0.0 # 设备: 电池信息
   permission_guard: ^2.0.1 # 权限: 请求封装

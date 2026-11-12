@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 
 /// 数据库 schema 比当前代码新时的兜底界面。

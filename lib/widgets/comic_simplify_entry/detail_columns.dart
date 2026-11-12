@@ -7,7 +7,7 @@
 /// 行高用 TextPainter 实测（无需 BuildContext），与 _DetailedRowBody 逐项对应。
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:zephyr/widgets/comic_simplify_entry/comic_simplify_entry_info.dart';
 
 /// 详情列表列数：每列最小 340、列间距 10；窄屏 1 列，宽屏 2/3/4 列。

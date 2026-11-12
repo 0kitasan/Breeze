@@ -87,7 +87,9 @@ Map<String, String> _iosEnvironmentVariables(CodeConfig codeConfig) {
   final linker = _runXcrun(['--sdk', sdk, '--find', 'clang']);
   final sdkRoot = _runXcrun(['--sdk', sdk, '--show-sdk-path']);
   final targetTripleEnv = targetTriple.replaceAll('-', '_').toUpperCase();
-  final deploymentTarget = codeConfig.iOS.targetVersion.toString();
+  final deploymentTarget = _deploymentTargetString(
+    codeConfig.iOS.deploymentVersion,
+  );
   final minimumVersionFlag = switch (sdk) {
     'iphoneos' => '-miphoneos-version-min=$deploymentTarget',
     'iphonesimulator' => '-mios-simulator-version-min=$deploymentTarget',
@@ -116,6 +118,16 @@ Map<String, String> _iosEnvironmentVariables(CodeConfig codeConfig) {
   }
 
   return env;
+}
+
+/// 把 [AppleVersion] 转成 clang / Xcode 接受的部署目标字符串（`15.0`）。
+///
+/// [AppleVersion.toString] 只是诊断用的表示（`AppleVersion(15, minor: 0,
+/// patch: 0)`），不能直接喂给 `-miphoneos-version-min` 或
+/// `IPHONEOS_DEPLOYMENT_TARGET`。
+String _deploymentTargetString(AppleVersion version) {
+  final base = '${version.major}.${version.minor}';
+  return version.patch == 0 ? base : '$base.${version.patch}';
 }
 
 String _runXcrun(List<String> arguments) {
@@ -189,9 +201,8 @@ String? _readNdkVersion(String projectRoot) {
     p.join(projectRoot, 'android', 'app', 'build.gradle.kts'),
   );
   if (!gradleFile.existsSync()) return null;
-  final match = RegExp(
-    r'ndkVersion\s*=\s*"([^"]+)"',
-  ).firstMatch(gradleFile.readAsStringSync());
+  final match = RegExp(r'ndkVersion\s*=\s*"([^"]+)"')
+      .firstMatch(gradleFile.readAsStringSync());
   return match?.group(1);
 }
 
