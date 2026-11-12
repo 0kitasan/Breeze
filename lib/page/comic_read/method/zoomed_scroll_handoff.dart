@@ -2,12 +2,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zephyr/page/comic_read/widgets/layout/read_layout.dart';
 
-/// 将缩放视口无法继续消耗的纵向拖动交给条漫列表。
+/// 将放大条漫的纵向手势交给原列表，平移容器仅负责横向移动。
 ///
 /// InteractiveViewer 的 child 是列表视口，而不是整章的高度。放大后列表
 /// 虽然锁定了自身的拖动识别，仍可接收转交的拖动及松手速度。
 class ZoomedScrollHandoff {
-  double? _previousTranslationY;
   double? _previousScale;
   Drag? _drag;
   ScrollPosition? _position;
@@ -36,7 +35,6 @@ class ZoomedScrollHandoff {
       position.jumpTo(position.pixels);
     }
     _lastDirection = 0;
-    _previousTranslationY = null;
     _previousScale = null;
   }
 
@@ -46,18 +44,20 @@ class ZoomedScrollHandoff {
     if (drag == null) return;
     final scale = _previousScale ?? 1;
     final velocityY = details.velocity.pixelsPerSecond.dy;
-    final canFling = details.pointerCount == 0 &&
-        velocityY * _lastDirection > 0;
-    drag.end(DragEndDetails(
-      velocity: Velocity(pixelsPerSecond: Offset(0, canFling ? velocityY / scale : 0)),
-      primaryVelocity: canFling ? velocityY / scale : 0,
-    ));
+    final canFling =
+        details.pointerCount == 0 && velocityY * _lastDirection > 0;
+    final velocity = canFling ? velocityY / scale : 0.0;
+    drag.end(
+      DragEndDetails(
+        velocity: Velocity(pixelsPerSecond: Offset(0, velocity)),
+        primaryVelocity: velocity,
+      ),
+    );
     _onScrollActivityChanged();
   }
 
   void start(TransformationController transformation) {
     cancel();
-    _previousTranslationY = transformation.value.storage[13];
     _previousScale = transformation.value.getMaxScaleOnAxis();
   }
 
@@ -68,37 +68,27 @@ class ZoomedScrollHandoff {
     required bool enabled,
   }) {
     final matrix = transformation.value;
-    final translationY = matrix.storage[13];
     final scale = matrix.getMaxScaleOnAxis();
-    final previousY = _previousTranslationY;
     final previousScale = _previousScale;
-    _previousTranslationY = translationY;
     _previousScale = scale;
 
     // 捏合及缩放锚点变化不应改变列表位置。
     if (!enabled ||
         details.pointerCount != 1 ||
-        previousY == null ||
         previousScale == null ||
         (scale - previousScale).abs() > 0.0001 ||
         scale <= kScaleLockThreshold ||
         !scrollController.hasClients) {
       cancel();
-      _previousTranslationY = translationY;
       _previousScale = scale;
       return;
     }
 
-    final dragY = details.focalPointDelta.dy;
-    final remainingY = dragY - (translationY - previousY);
-    // 仅转交同方向且未被视口消耗的部分，避免边界校正造成反向跳动。
-    if (dragY * remainingY <= 0) return;
-    final delta = remainingY.abs() > dragY.abs() ? dragY : remainingY;
+    // 不先消耗视口再转交边界余量：整次纵向拖动使用同一列表物理，
+    // 避免两套惯性、边界裁剪和重新起步造成速度突变。
+    final delta = details.focalPointDelta.dy;
     if (delta.abs() < 0.001) return;
     final position = scrollController.position;
-    final target = (position.pixels - delta / scale)
-        .clamp(position.minScrollExtent, position.maxScrollExtent);
-    if ((target - position.pixels).abs() < 0.001) return;
     if (_drag == null) {
       _detachPosition();
       _position = position;
@@ -117,8 +107,8 @@ class ZoomedScrollHandoff {
     _lastDirection = delta;
     _drag!.update(DragUpdateDetails(
       globalPosition: details.focalPoint,
-      delta: Offset(0, position.pixels - target),
-      primaryDelta: position.pixels - target,
+      delta: Offset(0, delta / scale),
+      primaryDelta: delta / scale,
     ));
   }
 }

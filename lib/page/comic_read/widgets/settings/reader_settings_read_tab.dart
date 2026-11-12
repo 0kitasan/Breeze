@@ -581,3 +581,30 @@ class _ReadExperienceSection extends StatelessWidget {
     );
   }
 }
+
+class ReaderScrollExperimentSwitch extends StatelessWidget {
+  const ReaderScrollExperimentSwitch({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final chinese = Localizations.localeOf(context).languageCode == 'zh';
+    return ValueListenableBuilder<bool>(
+      valueListenable: zoomedContinuousScrollEnabled,
+      builder: (context, enabled, _) => _SettingsSection(
+        title: chinese ? '实验性功能' : 'Experimental features',
+        children: [
+          _SettingsSwitchTile(
+            title: chinese
+                ? '条漫放大后连续滚动（实验性）'
+                : 'Continuous scrolling while zoomed (experimental)',
+            subtitle: chinese
+                ? '仅条漫模式。本次启动内有效，重启后关闭；异常时请关闭。'
+                : 'Webtoon mode only. Resets on restart; disable if gestures misbehave.',
+            value: enabled,
+            onChanged: (value) => zoomedContinuousScrollEnabled.value = value,
+          ),
+        ],
+      ),
+    );
+  }
+}

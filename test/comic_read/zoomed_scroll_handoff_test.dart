@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zephyr/page/comic_read/method/zoomed_scroll_handoff.dart';
 import 'package:zephyr/page/comic_read/widgets/settings/reader_scroll_experiment_switch.dart';
+import 'package:zephyr/page/comic_read/widgets/settings/reader_settings_sheet.dart';
 
 void main() {
   testWidgets('zoomed vertical drags continue through multiple list images', (
@@ -20,6 +21,7 @@ void main() {
             width: 300,
             height: 400,
             child: InteractiveViewer(
+              panAxis: PanAxis.horizontal,
               transformationController: transform,
               minScale: 1,
               maxScale: 4,
@@ -40,7 +42,9 @@ void main() {
                 },
                 child: ListView.builder(
                   controller: scroll,
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(
+                    parent: ClampingScrollPhysics(),
+                  ),
                   itemExtent: 400,
                   itemCount: 5,
                   itemBuilder: (_, index) => ColoredBox(
@@ -55,6 +59,10 @@ void main() {
     );
 
     final viewer = find.byType(InteractiveViewer);
+    // 视口尚未抵达缩放边界时，纵向拖动就应由列表接管。
+    await tester.drag(viewer, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(0));
     for (var i = 0; i < 8; i++) {
       await tester.drag(viewer, const Offset(0, -250));
       await tester.pumpAndSettle();
@@ -136,12 +144,13 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Continuous scrolling while zoomed (experimental)'),
           findsOneWidget);
-      expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      expect(find.byType(SwitchListTile), findsNothing);
+      expect(tester.widget<Switch>(find.byType(Switch)).value,
           false);
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       expect(zoomedContinuousScrollEnabled.value, true);
-      await tester.tap(find.byType(SwitchListTile));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       expect(zoomedContinuousScrollEnabled.value, false);
       expect(tester.takeException(), isNull);
