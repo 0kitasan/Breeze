@@ -11,6 +11,7 @@ import 'package:zephyr/page/comic_read/controller/reader_action_controller.dart'
 import 'package:zephyr/page/comic_read/cubit/reader_cubit.dart';
 import 'package:zephyr/page/comic_read/method/key.dart';
 import 'package:zephyr/page/comic_read/method/reader_gesture_logic.dart';
+import 'package:zephyr/page/comic_read/method/zoomed_scroll_handoff.dart';
 import 'package:zephyr/page/comic_read/widgets/layout/read_layout.dart';
 
 /// 阅读器输入控制器。
@@ -22,6 +23,7 @@ class ReaderInputController {
     required this.context,
     required this.readerCubit,
     required this.pageController,
+    required this.scrollController,
     required this.transformationController,
     required this.onToggleMenu,
     required this._onToggleDesktopFullscreen,
@@ -36,6 +38,8 @@ class ReaderInputController {
   final ReaderCubit readerCubit;
   late ReaderActionController actionController;
   final PageController pageController;
+  final ScrollController scrollController;
+  final ZoomedScrollHandoff _zoomedScrollHandoff = ZoomedScrollHandoff();
   final TransformationController transformationController;
   final VoidCallback onToggleMenu;
   final Future<void> Function() _onToggleDesktopFullscreen;
@@ -101,7 +105,17 @@ class ReaderInputController {
                 transformationController.value.getMaxScaleOnAxis() >
                     kScaleLockThreshold,
             interactionEndFrictionCoefficient: kReaderPanFriction,
-            onInteractionUpdate: (_) => _updateMultiTouchScrollLock(),
+            onInteractionStart: (_) =>
+                _zoomedScrollHandoff.start(transformationController),
+            onInteractionUpdate: (details) {
+              _zoomedScrollHandoff.update(
+                details: details,
+                transformation: transformationController,
+                scrollController: scrollController,
+                enabled: isColumnReadMode(readSetting.readMode),
+              );
+              _updateMultiTouchScrollLock();
+            },
             onInteractionEnd: (_) => _updateMultiTouchScrollLock(),
             child: isColumnReadMode(readSetting.readMode)
                 ? buildColumnMode(readSetting.doublePageMode)
