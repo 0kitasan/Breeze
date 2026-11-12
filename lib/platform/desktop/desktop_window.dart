@@ -8,8 +8,17 @@ import 'package:window_manager/window_manager.dart';
 Window? _mainWindow;
 
 /// 当前应用主窗口；窗口尚未创建时返回 null。
+///
+/// `getCurrent()` 取的是“当前/关键窗口”，而 macOS runner 会在启动时先把窗口
+/// 隐藏起来（等 Dart 侧摆好尺寸/位置再 show），此时窗口不是 key window，
+/// `getCurrent()` 可能返回 null。这种情形退回应用自己的第一个窗口——
+/// 启动阶段本应用只有主窗口这一个原生窗口。
 Window? get mainWindow {
   final cached = _mainWindow;
   if (cached != null) return cached;
-  return _mainWindow = WindowManager.instance.getCurrent();
+  final current = WindowManager.instance.getCurrent();
+  if (current != null) return _mainWindow = current;
+  final windows = WindowManager.instance.getAll();
+  if (windows.isEmpty) return null;
+  return _mainWindow = windows.first;
 }

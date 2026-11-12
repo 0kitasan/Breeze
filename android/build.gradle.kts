@@ -12,7 +12,9 @@ subprojects {
         if (plugins.hasPlugin("com.android.application") || plugins.hasPlugin("com.android.library")) {
             // AGP 9 移除了旧的 BaseExtension，改用统一的 CommonExtension DSL
             extensions.configure<com.android.build.api.dsl.CommonExtension> {
-                compileSdk = 36
+                // 与 :app 保持一致，避免插件模块用低版本 SDK 编译时
+                // 触发 androidx.core 1.19.0 的 AAR metadata 校验失败
+                compileSdk = 37
             }
         }
     }
