@@ -141,6 +141,9 @@ jobs:
       - name: 拉取 Flutter 依赖
         run: fvm flutter pub get
 
+      - name: 验证条漫缩放滚动与实验开关
+        run: fvm flutter test test/comic_read/zoomed_scroll_handoff_test.dart
+
       - name: 缓存 Android waifu2x CLI 依赖
         uses: actions/cache@v5
         with:
