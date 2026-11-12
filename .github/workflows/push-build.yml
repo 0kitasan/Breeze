@@ -81,11 +81,6 @@ jobs:
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v4
 
-      # compileSdk 37（androidx.core 1.19 起的 AAR metadata 要求）对应的平台与
-      # build-tools 显式预装，避免 Gradle 构建时再临时下载
-      - name: 安装 Android SDK Platform 37
-        run: yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
-
       - name: 设置 Dart SDK
         uses: dart-lang/setup-dart@v1
 
@@ -124,7 +119,20 @@ jobs:
           key: ${{ runner.os }}-android-ndk-${{ steps.ndk-config.outputs.ndk_version }}
 
       - name: 安装 Android NDK
-        run: sdkmanager "ndk;${{ steps.ndk-config.outputs.ndk_version }}" "platforms;android-${{ steps.ndk-config.outputs.compile_sdk }}" "cmake;3.22.1"
+        run: |
+          # API 37 在 SDK 仓库中的包名为 android-37.0，不能直接拼接整数。
+          COMPILE_SDK=${{ steps.ndk-config.outputs.compile_sdk }}
+          SDK_PACKAGES=$(sdkmanager --list)
+          PLATFORM_PACKAGE=""
+          for candidate in "platforms;android-$COMPILE_SDK" "platforms;android-$COMPILE_SDK.0"; do
+            if awk -F'|' '{gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1}' <<< "$SDK_PACKAGES" | grep -Fx "$candidate" > /dev/null; then
+              PLATFORM_PACKAGE="$candidate"
+              break
+            fi
+          done
+          [[ -n "$PLATFORM_PACKAGE" ]] || { echo "No SDK platform found for API $COMPILE_SDK" >&2; exit 1; }
+          echo "Installing SDK platform: $PLATFORM_PACKAGE"
+          sdkmanager "ndk;${{ steps.ndk-config.outputs.ndk_version }}" "$PLATFORM_PACKAGE" "build-tools;$COMPILE_SDK.0.0" "cmake;3.22.1"
 
       - name: 设置 NDK 环境变量
         run: |
