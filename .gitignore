@@ -108,3 +108,10 @@ native/generated/ir.json
 
 # Windows 本地跑 flutter test 需要，见 test/bookshelf 相关测试
 /objectbox.dll
+
+# Swift Package Manager 解析结果（由 Flutter/Xcode 构建时自动生成，不要提交）
+# 提交后一旦某个插件切换了 SPM 依赖源（如 sentry_flutter 10.3 从 sentry-cocoa 换成
+# sentry-apple-binaries），残留的旧 pin 会让 Xcode 同时拉取两个 manifest 同名的包
+# （两者都叫 "Sentry"），触发 SPM 解析崩溃：
+#   insertObjects:atIndexes:]: count of array (16) differs from count of index set (15)
+**/xcshareddata/swiftpm/Package.resolved
