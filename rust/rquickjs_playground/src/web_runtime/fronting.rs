@@ -20,9 +20,10 @@
 //!
 //! # 职责划分
 //!
-//! - **插件**（`src/network/ip-direct.ts`）：维护 host -> IP 表（内置表 + 用户覆盖），
-//!   探测宿主能力，把表通过 `__http_set_front_hosts` 下发过来；用
-//!   `__http_probe_front_hosts` 给候选 IP 测延迟，再把最优结果写回。
+//! - **插件**：维护 host -> IP 表（内置表 + 用户覆盖），通过公开的 `fronting`
+//!   对象下发（`fronting.setHosts`），用 `fronting.probe` 给候选 IP 测延迟，
+//!   再把最优结果写回。`fronting` 是 `js/35_fronting.js` 对内部 `__http_*`
+//!   函数的封装，参数与返回值都是普通对象。
 //! - **宿主**（本模块）：把命中的请求改写为 IP URL、注入 `Host` 头、
 //!   强制 HTTP/1.1、不自动跟随重定向、跳过证书校验、轮询选 IP、
 //!   连接失败时把 IP 标记为不健康（5 分钟）。
@@ -34,14 +35,16 @@
 //! Flutter 构建默认编译进产物（`hook/build.dart` 默认传 `--features host-fronting`），
 //! 需要关闭时设置环境变量 `BREEZE_HOST_FRONTING=0` 后重新构建。
 //! 直接跑 cargo 时用 `cargo build --features host-fronting`。
-//! 未启用时四个全局函数不注册，插件探测到缺失会静默降级。
+//! 未启用时四个内部函数不注册，公开的 `fronting` 对象（`js/35_fronting.js`）
+//! 统一返回 `fronting-unsupported`，插件不需要做能力探测。
 //!
-//! 注意：默认开启只是让宿主「具备能力」；插件不调用 `__http_set_front_hosts`
+//! 注意：默认开启只是让宿主「具备能力」；插件不调用 `fronting.setHosts`
 //! 时前置表为空，所有请求仍走原链路。
 //!
 //! # 延迟探测
 //!
-//! `__http_probe_front_hosts(payloadJson)` 返回 Promise<string>：
+//! 插件侧入口是 `fronting.probe(payload, { signal })`；下面是它封装的
+//! 内部实现 `__http_probe_front_hosts(payloadJson)`，返回 Promise<string>：
 //!
 //! ```json
 //! {
@@ -948,7 +951,7 @@ mod tests {
         });
     }
 
-    /// feature 打开时必须注册四个全局函数，否则插件会误判「宿主不支持」。
+    /// feature 打开时必须注册四个内部函数，并暴露不带下划线前缀的 `fronting` 对象。
     #[cfg(feature = "host-fronting")]
     #[test]
     fn globals_are_registered_with_feature_enabled() {
@@ -958,6 +961,11 @@ mod tests {
               get: typeof __http_get_front_hosts,
               clear: typeof __http_clear_front_hosts,
               probe: typeof __http_probe_front_hosts,
+              api: typeof fronting,
+              apiSet: typeof fronting.setHosts,
+              apiGet: typeof fronting.getHosts,
+              apiClear: typeof fronting.clearHosts,
+              apiProbe: typeof fronting.probe,
             })
         "#;
         let result = crate::tests::run_async_script(script).expect("script should run");
@@ -966,20 +974,25 @@ mod tests {
         assert_eq!(parsed["get"], json!("function"));
         assert_eq!(parsed["clear"], json!("function"));
         assert_eq!(parsed["probe"], json!("function"));
+        assert_eq!(parsed["api"], json!("object"));
+        assert_eq!(parsed["apiSet"], json!("function"));
+        assert_eq!(parsed["apiGet"], json!("function"));
+        assert_eq!(parsed["apiClear"], json!("function"));
+        assert_eq!(parsed["apiProbe"], json!("function"));
     }
 
-    /// JS 侧 set/get/clear 必须落到当前 runtime 自己的表里。
+    /// 插件侧公开 API 必须直接收发对象，不需要自己拼 JSON 字符串。
     #[cfg(feature = "host-fronting")]
     #[test]
-    fn scoped_front_hosts_js_api_works() {
+    fn public_fronting_api_uses_plain_objects() {
         with_serialized_state(|| {
             let script = r#"
                 (() => {
-                  const set = JSON.parse(__http_set_front_hosts(JSON.stringify({
+                  const set = fronting.setHosts({
                     "e-hentai.org": ["172.66.132.196"]
-                  })));
-                  const get = JSON.parse(__http_get_front_hosts());
-                  const clear = JSON.parse(__http_clear_front_hosts());
+                  });
+                  const get = fronting.getHosts();
+                  const clear = fronting.clearHosts();
                   return JSON.stringify({ set, get, clear });
                 })()
             "#;
@@ -995,23 +1008,67 @@ mod tests {
         });
     }
 
-    /// 默认构建（feature 关闭）不得暴露这些函数，保证零行为变化。
+    /// 公开 API 的探测入口同样返回 Promise，并复用普通请求的取消通道。
+    #[cfg(feature = "host-fronting")]
+    #[test]
+    fn public_probe_api_returns_parsed_result() {
+        let script = r#"
+            (async () => {
+              const result = await fronting.probe({ host: "not a domain" });
+              const ac = new AbortController();
+              ac.abort();
+              const canceled = await fronting.probe(
+                { host: "example.com" },
+                { signal: ac.signal },
+              );
+              return JSON.stringify({ result, canceled });
+            })()
+        "#;
+        let result = crate::tests::run_async_script(script).expect("script should run");
+        let parsed: Value = serde_json::from_str(&result).expect("result should be JSON");
+        assert_eq!(parsed["result"]["ok"], json!(false));
+        assert_eq!(parsed["result"]["error"], json!("invalid-host"));
+        assert_eq!(parsed["canceled"]["ok"], json!(false));
+        assert_eq!(parsed["canceled"]["canceled"], json!(true));
+        assert_eq!(parsed["canceled"]["error"], json!("request-was-canceled"));
+    }
+
+    /// 默认构建（feature 关闭）不得暴露内部函数，但 `fronting` 对象仍要在，
+    /// 且统一返回 `fronting-unsupported`，插件不需要做能力探测。
     #[cfg(not(feature = "host-fronting"))]
     #[test]
     fn globals_are_absent_without_feature() {
         let script = r#"
-            JSON.stringify({
-              set: typeof __http_set_front_hosts,
-              get: typeof __http_get_front_hosts,
-              clear: typeof __http_clear_front_hosts,
-              probe: typeof __http_probe_front_hosts,
-            })
+            (async () => {
+              const set = fronting.setHosts({ "e-hentai.org": ["172.66.132.196"] });
+              const get = fronting.getHosts();
+              const clear = fronting.clearHosts();
+              const probe = await fronting.probe({ host: "e-hentai.org" });
+              return JSON.stringify({
+                internal: {
+                  set: typeof __http_set_front_hosts,
+                  get: typeof __http_get_front_hosts,
+                  clear: typeof __http_clear_front_hosts,
+                  probe: typeof __http_probe_front_hosts,
+                },
+                api: typeof fronting,
+                set,
+                get,
+                clear,
+                probe,
+              });
+            })()
         "#;
         let result = crate::tests::run_async_script(script).expect("script should run");
         let parsed: Value = serde_json::from_str(&result).expect("result should be JSON");
-        assert_eq!(parsed["set"], json!("undefined"));
-        assert_eq!(parsed["get"], json!("undefined"));
-        assert_eq!(parsed["clear"], json!("undefined"));
-        assert_eq!(parsed["probe"], json!("undefined"));
+        assert_eq!(parsed["internal"]["set"], json!("undefined"));
+        assert_eq!(parsed["internal"]["get"], json!("undefined"));
+        assert_eq!(parsed["internal"]["clear"], json!("undefined"));
+        assert_eq!(parsed["internal"]["probe"], json!("undefined"));
+        assert_eq!(parsed["api"], json!("object"));
+        assert_eq!(parsed["set"]["error"], json!("fronting-unsupported"));
+        assert_eq!(parsed["get"]["error"], json!("fronting-unsupported"));
+        assert_eq!(parsed["clear"]["error"], json!("fronting-unsupported"));
+        assert_eq!(parsed["probe"]["error"], json!("fronting-unsupported"));
     }
 }
