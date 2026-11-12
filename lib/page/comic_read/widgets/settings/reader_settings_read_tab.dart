@@ -27,6 +27,8 @@ class _ReaderSettingsReadTab extends StatelessWidget {
             onDoublePageModeChanged: onDoublePageModeChanged,
           ),
           const SizedBox(height: 18),
+          const ReaderScrollExperimentSwitch(),
+          const SizedBox(height: 18),
           const _ThemeModeSection(),
           const SizedBox(height: 18),
           const _ReadBackgroundSection(),
@@ -36,8 +38,6 @@ class _ReaderSettingsReadTab extends StatelessWidget {
           const _PreloadSection(),
           const SizedBox(height: 18),
           const _ReadExperienceSection(),
-          const SizedBox(height: 18),
-          const ReaderScrollExperimentSwitch(),
         ],
       ),
     );
@@ -598,10 +598,10 @@ class ReaderScrollExperimentSwitch extends StatelessWidget {
                 ? '条漫放大后连续滚动（实验性）'
                 : 'Continuous scrolling while zoomed (experimental)',
             subtitle: chinese
-                ? '仅条漫模式。本次启动内有效，重启后关闭；异常时请关闭。'
-                : 'Webtoon mode only. Resets on restart; disable if gestures misbehave.',
+                ? '仅条漫模式。自动保存开关状态；手势异常时请关闭。'
+                : 'Webtoon mode only. Remembers your choice; disable if gestures misbehave.',
             value: enabled,
-            onChanged: (value) => zoomedContinuousScrollEnabled.value = value,
+            onChanged: setZoomedContinuousScrollEnabled,
           ),
         ],
       ),

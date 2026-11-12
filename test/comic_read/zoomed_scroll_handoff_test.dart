@@ -1,10 +1,27 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zephyr/page/comic_read/method/zoomed_scroll_handoff.dart';
 import 'package:zephyr/page/comic_read/widgets/settings/reader_scroll_experiment_switch.dart';
 import 'package:zephyr/page/comic_read/widgets/settings/reader_settings_sheet.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('experimental preference defaults off and survives reloads', () async {
+    SharedPreferences.setMockInitialValues({});
+    await loadZoomedContinuousScrollEnabled();
+    expect(zoomedContinuousScrollEnabled.value, false);
+    await setZoomedContinuousScrollEnabled(true);
+    zoomedContinuousScrollEnabled.value = false;
+    await loadZoomedContinuousScrollEnabled();
+    expect(zoomedContinuousScrollEnabled.value, true);
+    await setZoomedContinuousScrollEnabled(false);
+    zoomedContinuousScrollEnabled.value = true;
+    await loadZoomedContinuousScrollEnabled();
+    expect(zoomedContinuousScrollEnabled.value, false);
+  });
+
   testWidgets('zoomed vertical drags continue through multiple list images', (
     tester,
   ) async {
@@ -127,6 +144,7 @@ void main() {
   testWidgets('experimental switch starts disabled and can be toggled', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
     zoomedContinuousScrollEnabled.value = false;
     addTearDown(() => zoomedContinuousScrollEnabled.value = false);
     // 与实际设置面板一样使用 material_ui 的 App、主题及 Material 祖先。
