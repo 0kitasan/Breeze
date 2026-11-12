@@ -1,6 +1,9 @@
 {
   "@@locale": "zh_CN",
   "appName": "Breeze",
+  "database": {
+    "incompatible": "数据库不兼容，请使用更新版本的软件"
+  },
   "common": {
     "ok": "确定",
     "cancel": "取消",
@@ -126,6 +129,8 @@
     "showPluginHomeSubtitle": "关闭后隐藏底部导航的首页页签",
     "showPluginCloudFavorite": "显示云收藏",
     "showPluginCloudFavoriteSubtitle": "关闭后隐藏底部导航的云收藏页签",
+    "showSearchBookmark": "显示搜索书签",
+    "showSearchBookmarkSubtitle": "关闭后隐藏更多页搜索书签入口与搜索结果页添加按钮",
     "contentAndNetwork": "内容与网络",
     "content": "内容",
     "network": "网络",
@@ -148,6 +153,8 @@
     "proxyTypeSubtitle": "选择代理协议",
     "proxyTypeHttp": "HTTP",
     "proxyTypeSocks5": "SOCKS5",
+    "blockPrivateNetwork": "内网拦截",
+    "blockPrivateNetworkSubtitle": "拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭",
     "updateAccelerate": "更新下载加速",
     "updateAccelerateSubtitle": "开启后优先使用代理加速 GitHub 更新链接",
     "retryDownloadUntilSuccess": "下载失败后持续重试",
@@ -548,6 +555,8 @@
     "doublePageLeadingBlankSubtitle": "在每章最前插入一页空白，使配对整体错一位",
     "landscapeReader": "横屏阅读",
     "landscapeReaderSubtitle": "阅读时切换为横屏，离开后恢复原来的方向",
+    "autoDoublePage": "横屏自动双页",
+    "autoDoublePageSubtitle": "横屏时自动切换为双页，竖屏时自动切换回单页",
     "showStatusBar": "显示状态栏",
     "showStatusBarSubtitle": "阅读时保留顶部状态栏，仅隐藏底部导航栏",
     "themeMode": "系统模式",
@@ -643,7 +652,7 @@
     "searchHint": "搜索插件名称或作者...",
     "localInstall": "本地安装",
     "networkInstall": "网络安装",
-    "cloudComponents": "云端组件",
+    "cloudPlugins": "云端插件",
     "loginSuccess": "请在网页中完成登录，宿主会自动同步 Cookie",
     "chromiumFallbackUnsupported": "当前平台不支持外部 Chromium 自动登录回退",
     "switchingToExternalBrowser": "内置 WebView 登录受限，正在切换外部浏览器...",
@@ -687,10 +696,10 @@
     "githubRepo": "GitHub 仓库",
     "download": "下载",
     "downloadUpdate": "下载更新",
-    "noCloudPlugins": "暂无云端组件",
+    "noCloudPlugins": "暂无云端插件",
     "noMatchingPlugins": "没有匹配的插件",
     "networkInstallHint": "请输入插件脚本 URL",
-    "cloudPluginsLoadFailed": "云端组件列表加载失败: $error",
+    "cloudPluginsLoadFailed": "云端插件列表加载失败: $error",
     "installingFromCloud": "正在下载并安装 $name...",
     "installingFromLocal": "正在安装本地插件...",
     "installingFromNetwork": "正在下载网络插件...",
@@ -1015,7 +1024,8 @@
     "downloadTasks": "下载任务",
     "sync": "同步",
     "comicFollow": "追更",
-    "changelog": "更新日志"
+    "changelog": "更新日志",
+    "newBadge": "新"
   },
   "search": {
     "title": "搜索",
@@ -1296,6 +1306,8 @@
   },
   "update": {
     "newVersion": "发现新版本",
+    "snoozeWeek": "一周内不再提醒",
+    "snoozeWeekSuccess": "已设置：一周内不再提醒",
     "goToGitHub": "前往GitHub",
     "downloadInstall": "下载安装",
     "apkDownloadFailed": "下载失败，请稍后再试！",

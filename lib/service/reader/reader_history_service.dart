@@ -12,6 +12,7 @@ import 'package:zephyr/page/comic_info/json/normal/normal_comic_all_info.dart'
     as normal;
 import 'package:zephyr/page/comic_info/method/get_plugin_detail.dart';
 import 'package:zephyr/page/comic_read/model/normal_comic_ep_info.dart';
+import 'package:zephyr/service/reader/comic_read_chapter_repository.dart';
 import 'package:zephyr/util/worker_isolate.dart';
 
 /// 供 [ReaderHistoryService] 周期性保存时使用的快照。
@@ -47,6 +48,7 @@ class ReaderHistoryService {
   bool _isInserting = false;
   bool _isLoading = true;
   HistorySnapshot Function()? _snapshotProvider;
+  String? _markedChapterId;
 
   /// 加载指定漫画的历史记录，并解析 comicInfo 供后续写入使用。
   Future<void> loadHistory({
@@ -58,6 +60,7 @@ class ReaderHistoryService {
     _comicId = comicId;
     _comicInfo = _resolveNormalComicInfo(comicInfo);
     _isLoading = true;
+    _markedChapterId = null;
 
     final query = objectbox.unifiedHistoryBox
         .query(UnifiedComicHistory_.uniqueKey.equals('$source:$comicId'))
@@ -74,6 +77,36 @@ class ReaderHistoryService {
 
   /// 标记数据加载完成，可以开始写入。
   void markLoaded() => _isLoading = false;
+
+  /// 阅读器首屏就绪后立即记录当前章节已读。
+  void markCurrentChapterRead() {
+    final snapshot = _snapshotProvider?.call();
+    if (snapshot == null) return;
+    _markChapterRead(snapshot.epInfo, snapshot.chapterOrder);
+  }
+
+  /// 章节切换时由周期保存顺带记录；同一章只写一次。
+  void _markChapterRead(NormalComicEpInfo epInfo, int chapterOrder) {
+    final source = _source;
+    final comicId = _comicId;
+    final chapterId = epInfo.epId.trim();
+    if (source == null || comicId == null || chapterId.isEmpty) return;
+    if (_markedChapterId == chapterId) return;
+
+    try {
+      ComicReadChapterRepository.instance.markRead(
+        source: source,
+        comicId: comicId,
+        chapterId: chapterId,
+        chapterTitle: epInfo.epName,
+        chapterOrder: chapterOrder,
+      );
+      _markedChapterId = chapterId;
+    } catch (e, s) {
+      logger.w('mark chapter read failed', error: e);
+      logger.d(s);
+    }
+  }
 
   /// 启动周期性保存。
   ///
@@ -99,6 +132,8 @@ class ReaderHistoryService {
 
     final snapshot = _snapshotProvider?.call();
     if (snapshot == null) return;
+
+    _markChapterRead(snapshot.epInfo, snapshot.chapterOrder);
 
     final currentTime = DateTime.now().toLocal().toString().substring(0, 19);
     _statusController.add(

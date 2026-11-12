@@ -25,6 +25,7 @@ _GlobalSettingState _$GlobalSettingStateFromJson(
   welcomePageNum: (json['welcomePageNum'] as num?)?.toInt() ?? 0,
   showPluginHome: json['showPluginHome'] as bool? ?? true,
   showPluginCloudFavorite: json['showPluginCloudFavorite'] as bool? ?? true,
+  showSearchBookmark: json['showSearchBookmark'] as bool? ?? true,
   syncSetting: json['syncSetting'] == null
       ? const SyncSettingState()
       : SyncSettingState.fromJson(json['syncSetting'] as Map<String, dynamic>),
@@ -61,6 +62,7 @@ _GlobalSettingState _$GlobalSettingStateFromJson(
       : ProxySettingState.fromJson(
           json['proxySetting'] as Map<String, dynamic>,
         ),
+  blockPrivateNetwork: json['blockPrivateNetwork'] as bool? ?? false,
   searchBookmarkProbePages:
       (json['searchBookmarkProbePages'] as num?)?.toInt() ?? 3,
   windowWidth: (json['windowWidth'] as num?)?.toDouble() ?? 1280.0,
@@ -111,6 +113,7 @@ Map<String, dynamic> _$GlobalSettingStateToJson(
   'welcomePageNum': instance.welcomePageNum,
   'showPluginHome': instance.showPluginHome,
   'showPluginCloudFavorite': instance.showPluginCloudFavorite,
+  'showSearchBookmark': instance.showSearchBookmark,
   'syncSetting': instance.syncSetting.toJson(),
   'maskedKeywords': instance.maskedKeywords,
   'socks5ProxyEnabled': instance.socks5ProxyEnabled,
@@ -132,6 +135,7 @@ Map<String, dynamic> _$GlobalSettingStateToJson(
   'clickCoverToStartReading': instance.clickCoverToStartReading,
   'searchHistory': instance.searchHistory,
   'proxySetting': instance.proxySetting.toJson(),
+  'blockPrivateNetwork': instance.blockPrivateNetwork,
   'searchBookmarkProbePages': instance.searchBookmarkProbePages,
   'windowWidth': instance.windowWidth,
   'windowHeight': instance.windowHeight,
@@ -322,6 +326,8 @@ _ReadSettingState _$ReadSettingStateFromJson(Map<String, dynamic> json) =>
       preloadChapterCount: (json['preloadChapterCount'] as num?)?.toInt() ?? 1,
       landscapeReader: json['landscapeReader'] as bool? ?? false,
       showStatusBar: json['showStatusBar'] as bool? ?? false,
+      autoDoublePageInLandscape:
+          json['autoDoublePageInLandscape'] as bool? ?? false,
       doublePageMode: json['doublePageMode'] as bool? ?? false,
       doublePageSeamless: json['doublePageSeamless'] as bool? ?? false,
       doublePageLeadingBlank: json['doublePageLeadingBlank'] as bool? ?? false,
@@ -380,6 +386,7 @@ Map<String, dynamic> _$ReadSettingStateToJson(
   'preloadChapterCount': instance.preloadChapterCount,
   'landscapeReader': instance.landscapeReader,
   'showStatusBar': instance.showStatusBar,
+  'autoDoublePageInLandscape': instance.autoDoublePageInLandscape,
   'doublePageMode': instance.doublePageMode,
   'doublePageSeamless': instance.doublePageSeamless,
   'doublePageLeadingBlank': instance.doublePageLeadingBlank,

@@ -1,6 +1,9 @@
 {
   "@@locale": "en_US",
   "appName": "Breeze",
+  "database": {
+    "incompatible": "The database is incompatible. Please update to a newer version."
+  },
   "common": {
     "ok": "OK",
     "cancel": "Cancel",
@@ -126,6 +129,8 @@
     "showPluginHomeSubtitle": "Hide the home tab in the bottom navigation when off",
     "showPluginCloudFavorite": "Show cloud favorites",
     "showPluginCloudFavoriteSubtitle": "Hide the cloud favorites tab in the bottom navigation when off",
+    "showSearchBookmark": "Show search bookmarks",
+    "showSearchBookmarkSubtitle": "Hide the search bookmarks entry in More and the add button in search results when off",
     "contentAndNetwork": "Content & Network",
     "content": "Content",
     "network": "Network",
@@ -148,6 +153,8 @@
     "proxyTypeSubtitle": "Choose proxy protocol",
     "proxyTypeHttp": "HTTP",
     "proxyTypeSocks5": "SOCKS5",
+    "blockPrivateNetwork": "Block private network",
+    "blockPrivateNetworkSubtitle": "Block requests to private / reserved addresses, including IP-direct fronting; off by default",
     "updateAccelerate": "Update acceleration",
     "updateAccelerateSubtitle": "Use proxy to accelerate GitHub update links",
     "retryDownloadUntilSuccess": "Keep retrying failed downloads",
@@ -548,6 +555,8 @@
     "doublePageLeadingBlankSubtitle": "Insert a blank page at the start of each chapter to shift page pairing",
     "landscapeReader": "Landscape reading",
     "landscapeReaderSubtitle": "Switch to landscape while reading and restore the previous direction when you leave",
+    "autoDoublePage": "Auto double page in landscape",
+    "autoDoublePageSubtitle": "Switch to double page in landscape and back to single page in portrait",
     "showStatusBar": "Show status bar",
     "showStatusBarSubtitle": "Keep the top status bar while reading, hide only the bottom navigation bar",
     "themeMode": "Theme mode",
@@ -643,7 +652,7 @@
     "searchHint": "Search plugin name or author...",
     "localInstall": "Local install",
     "networkInstall": "Network install",
-    "cloudComponents": "Cloud components",
+    "cloudPlugins": "Cloud plugins",
     "loginSuccess": "Please complete login in the browser, the host will sync cookies automatically",
     "chromiumFallbackUnsupported": "External Chromium auto-login fallback is not supported on this platform",
     "switchingToExternalBrowser": "Built-in WebView login is limited, switching to external browser...",
@@ -686,10 +695,10 @@
     "githubRepo": "GitHub Repo",
     "download": "Download",
     "downloadUpdate": "Download update",
-    "noCloudPlugins": "No cloud components",
+    "noCloudPlugins": "No cloud plugins",
     "noMatchingPlugins": "No matching plugins",
     "networkInstallHint": "Enter plugin script URL",
-    "cloudPluginsLoadFailed": "Failed to load cloud components: $error",
+    "cloudPluginsLoadFailed": "Failed to load cloud plugins: $error",
     "installingFromCloud": "Downloading and installing $name...",
     "installingFromLocal": "Installing local plugin...",
     "installingFromNetwork": "Downloading network plugin...",
@@ -1014,7 +1023,8 @@
     "downloadTasks": "Download Tasks",
     "sync": "Sync",
     "comicFollow": "Updates",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "newBadge": "NEW"
   },
   "search": {
     "title": "Search",
@@ -1295,6 +1305,8 @@
   },
   "update": {
     "newVersion": "New version available",
+    "snoozeWeek": "Don't remind for a week",
+    "snoozeWeekSuccess": "No update reminders for the next week",
     "goToGitHub": "Go to GitHub",
     "downloadInstall": "Download & install",
     "apkDownloadFailed": "Download failed, please try again later",

@@ -2,9 +2,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:zephyr/config/global/global_setting.dart';
 import 'package:zephyr/config/router/router.gr.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/page/comic_follow/cubit/comic_follow_cubit.dart';
+import 'package:zephyr/service/update/check_update.dart';
+import 'package:zephyr/service/update/json/github_release_json.dart';
 
 class SettingsWidget extends StatelessWidget {
   const SettingsWidget({super.key});
@@ -36,7 +39,7 @@ class SettingsWidget extends StatelessWidget {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (updateCount > 0) _UpdateBadge(count: updateCount),
+                  if (updateCount > 0) _NewBadge(count: updateCount),
                   const Icon(Icons.chevron_right),
                 ],
               ),
@@ -44,11 +47,19 @@ class SettingsWidget extends StatelessWidget {
             );
           },
         ),
-        ListTile(
-          leading: const Icon(Icons.bookmark_outline),
-          title: Text(t.searchBookmark.title),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.pushRoute(const SearchBookmarkRoute()),
+        BlocSelector<GlobalSettingCubit, GlobalSettingState, bool>(
+          selector: (state) => state.showSearchBookmark,
+          builder: (context, showSearchBookmark) {
+            if (!showSearchBookmark) {
+              return const SizedBox.shrink();
+            }
+            return ListTile(
+              leading: const Icon(Icons.bookmark_outline),
+              title: Text(t.searchBookmark.title),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.pushRoute(const SearchBookmarkRoute()),
+            );
+          },
         ),
         ListTile(
           leading: const Icon(Icons.settings_outlined),
@@ -59,11 +70,23 @@ class SettingsWidget extends StatelessWidget {
         const SizedBox(height: 8),
         const Divider(height: 1, thickness: 0.3),
         _buildSectionTitle(context, t.more.others, Icons.more_horiz),
-        ListTile(
-          leading: const Icon(Icons.history),
-          title: Text(t.more.changelog),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.pushRoute(ChangelogRoute()),
+        // 检测到可用更新时在「更新日志」条目挂 NEW 徽标；只做提示，不额外发通知。
+        ValueListenableBuilder<GithubReleaseJson?>(
+          valueListenable: pendingAppUpdate,
+          builder: (context, pendingUpdate, _) {
+            return ListTile(
+              leading: const Icon(Icons.history),
+              title: Text(t.more.changelog),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (pendingUpdate != null) const _NewBadge(),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+              onTap: () => context.pushRoute(ChangelogRoute()),
+            );
+          },
         ),
         ListTile(
           leading: const Icon(Icons.info_outline),
@@ -97,10 +120,11 @@ class SettingsWidget extends StatelessWidget {
   }
 }
 
-class _UpdateBadge extends StatelessWidget {
-  const _UpdateBadge({required this.count});
+/// 本地化的 NEW 徽标：追更未读数达到 99 时显示 99+。
+class _NewBadge extends StatelessWidget {
+  const _NewBadge({this.count});
 
-  final int count;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +137,7 @@ class _UpdateBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        count >= 99 ? '99+' : 'NEW',
+        (count ?? 0) >= 99 ? '99+' : t.more.newBadge,
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onError,
           fontWeight: FontWeight.w800,

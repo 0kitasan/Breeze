@@ -90,6 +90,13 @@ void setSocks5Proxy({required String proxy}) =>
 void setTlsVerifyEnabled({required bool enabled}) =>
     RustLib.instance.api.crateApiQjsSetTlsVerifyEnabled(enabled: enabled);
 
+/// 设置是否允许访问内网 / 保留地址段（默认允许）。
+void setAllowPrivateNetwork({required bool enabled}) =>
+    RustLib.instance.api.crateApiQjsSetAllowPrivateNetwork(enabled: enabled);
+
+bool isAllowPrivateNetwork() =>
+    RustLib.instance.api.crateApiQjsIsAllowPrivateNetwork();
+
 void setHttpRequestsBlocked({required bool blocked}) =>
     RustLib.instance.api.crateApiQjsSetHttpRequestsBlocked(blocked: blocked);
 

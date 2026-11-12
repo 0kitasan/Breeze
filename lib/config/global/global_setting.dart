@@ -132,6 +132,7 @@ abstract class GlobalSettingState with _$GlobalSettingState {
     @Default(0) int welcomePageNum,
     @Default(true) bool showPluginHome,
     @Default(true) bool showPluginCloudFavorite,
+    @Default(true) bool showSearchBookmark,
     @Default(SyncSettingState()) SyncSettingState syncSetting,
     @Default([]) List<String> maskedKeywords,
     @Default(true) bool socks5ProxyEnabled,
@@ -153,6 +154,8 @@ abstract class GlobalSettingState with _$GlobalSettingState {
     @Default(false) bool clickCoverToStartReading,
     @Default([]) List<String> searchHistory,
     @Default(ProxySettingState()) ProxySettingState proxySetting,
+    // 内网拦截：默认关闭（放行内网 / 保留地址段），与 Rust 侧初始值一致。
+    @Default(false) bool blockPrivateNetwork,
     // 搜索书签邻页找回：向后最多探测页数（0=只找本页）；向前固定 1 页。
     @Default(3) int searchBookmarkProbePages,
     @Default(1280.0) double windowWidth,
@@ -288,6 +291,7 @@ abstract class ReadSettingState with _$ReadSettingState {
     @Default(1) int preloadChapterCount,
     @Default(false) bool landscapeReader,
     @Default(false) bool showStatusBar,
+    @Default(false) bool autoDoublePageInLandscape,
     @Default(false) bool doublePageMode,
     @Default(false) bool doublePageSeamless,
     @Default(false) bool doublePageLeadingBlank,

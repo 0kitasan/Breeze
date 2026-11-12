@@ -3,12 +3,14 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:markdown_widget/widget/markdown_block.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_guard/permission_guard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/main.dart';
@@ -17,6 +19,73 @@ import 'package:zephyr/service/update/json/github_release_json.dart';
 import 'package:zephyr/type/pipe.dart';
 import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/widgets/toast.dart';
+
+/// 「一周内不再提醒」静默期截止时间的存储键（毫秒时间戳）。
+const String updateSnoozeUntilPrefsKey = 'update_snooze_until_ms';
+
+/// 「一周内不再提醒」的静默时长。
+const Duration updateSnoozeDuration = Duration(days: 7);
+
+/// 用户已查看过更新日志的版本号存储键。
+const String changelogSeenVersionPrefsKey = 'changelog_seen_version';
+
+/// 检测到的可用更新；非空时「更新日志」条目展示 NEW 徽标。
+/// 只做界面提示，不额外发送通知。
+final ValueNotifier<GithubReleaseJson?> pendingAppUpdate =
+    ValueNotifier<GithubReleaseJson?>(null);
+
+/// 该版本的更新日志是否已看过（看过则不再展示 NEW 徽标）。
+Future<bool> isChangelogSeen(String version) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(changelogSeenVersionPrefsKey) == version;
+  } catch (e, stackTrace) {
+    logger.e('读取更新日志已读版本失败', error: e, stackTrace: stackTrace);
+    return false;
+  }
+}
+
+/// 打开更新日志后调用：清掉徽标并记住该版本，同一版本不再提示。
+/// 不传版本时取当前检测到的可用更新版本。
+Future<void> markChangelogSeen([String? version]) async {
+  final seenVersion = version ?? pendingAppUpdate.value?.tagName;
+  pendingAppUpdate.value = null;
+  if (seenVersion == null) return;
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(changelogSeenVersionPrefsKey, seenVersion);
+  } catch (e, stackTrace) {
+    logger.e('保存更新日志已读版本失败', error: e, stackTrace: stackTrace);
+  }
+}
+
+/// 更新提醒是否处于「一周内不再提醒」的静默期。
+Future<bool> isUpdateReminderSnoozed() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final untilMs = prefs.getInt(updateSnoozeUntilPrefsKey);
+    if (untilMs == null) return false;
+    return DateTime.now().millisecondsSinceEpoch < untilMs;
+  } catch (e, stackTrace) {
+    logger.e('读取更新提醒静默时间失败', error: e, stackTrace: stackTrace);
+    return false;
+  }
+}
+
+/// 设置「一周内不再提醒」。
+Future<bool> snoozeUpdateReminderForWeek() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final untilMs = DateTime.now()
+        .add(updateSnoozeDuration)
+        .millisecondsSinceEpoch;
+    await prefs.setInt(updateSnoozeUntilPrefsKey, untilMs);
+    return true;
+  } catch (e, stackTrace) {
+    logger.e('保存更新提醒静默时间失败', error: e, stackTrace: stackTrace);
+    return false;
+  }
+}
 
 Future<String> getAppVersion() async {
   String version = 'Unknown';
@@ -42,7 +111,7 @@ Future<GithubReleaseJson> getCloudVersion() async {
       headers: {'Accept': 'application/json, text/plain, */*'},
     );
     final body = response.text.trim();
-    if (response.ok && body.isNotEmpty) {
+    if (body.isNotEmpty) {
       return GithubReleaseJson.fromJson(jsonDecode(body));
     }
   } catch (e, stackTrace) {
@@ -77,7 +146,7 @@ Future<GithubReleaseJson> getCloudVersion() async {
           headers: {'Accept': 'application/json, text/plain, */*'},
         );
         final body = response.text.trim();
-        if (response.ok && body.isNotEmpty) {
+        if (body.isNotEmpty) {
           return GithubReleaseJson.fromJson(jsonDecode(body));
         }
       } catch (e, stackTrace) {
@@ -146,14 +215,18 @@ Future<void> installApk(String apkUrl) async {
 }
 
 Future<bool> _requestInstallPackagesPermission() async {
-  if (Platform.isAndroid) {
-    var status = await Permission.requestInstallPackages.status;
+  if (!Platform.isAndroid) return false;
+  try {
+    final status = await Permission.requestInstallPackages.status;
     if (status.isGranted) {
       return true;
     } else if (status.isDenied) {
-      var requestResult = await Permission.requestInstallPackages.request();
+      final requestResult = await Permission.requestInstallPackages.request();
       return requestResult.isGranted;
     }
+  } on PlatformException catch (e) {
+    // 用户取消安装权限弹窗属于预期情况。
+    logger.w('请求安装权限失败', error: e);
   }
   return false;
 }
@@ -179,6 +252,8 @@ bool _isGithubReleaseDownloadUrl(String url) {
 
 Future<void> checkUpdate(BuildContext context) async {
   if (!context.mounted) return;
+  // 静默期只抑制弹窗，仍然检测版本，好让「更新日志」保留 NEW 徽标。
+  final snoozed = await isUpdateReminderSnoozed();
   final temp = await getCloudVersion();
   final cloudVersion = temp.tagName;
   final releaseInfo = temp.body;
@@ -199,48 +274,68 @@ Future<void> checkUpdate(BuildContext context) async {
     return;
   }
 
-  if (isUpdateAvailable(cloudVersion, localVersion)) {
-    if (!context.mounted) return;
-    var releaseNotes = releaseInfo;
-    var releasePageUrl = url;
+  if (!isUpdateAvailable(cloudVersion, localVersion)) {
+    pendingAppUpdate.value = null;
+    return;
+  }
 
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(t.update.newVersion),
-          content: SingleChildScrollView(
-            child: MarkdownBlock(data: releaseNotes),
+  // 已看过该版本的更新日志就不再挂徽标，避免同一版本反复提示。
+  final changelogSeen = await isChangelogSeen(cloudVersion);
+  pendingAppUpdate.value = changelogSeen ? null : temp;
+
+  if (snoozed) {
+    logger.d('更新提醒处于静默期，跳过本次弹窗');
+    return;
+  }
+
+  if (!context.mounted) return;
+  final releaseNotes = releaseInfo;
+  final releasePageUrl = url;
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text(t.update.newVersion),
+        content: SingleChildScrollView(
+          child: MarkdownBlock(data: releaseNotes),
+        ),
+        actions: [
+          TextButton(
+            child: Text(t.update.snoozeWeek),
+            onPressed: () async {
+              context.pop();
+              if (await snoozeUpdateReminderForWeek()) {
+                showSuccessToast(t.update.snoozeWeekSuccess);
+              }
+            },
           ),
-          actions: [
+          TextButton(
+            child: Text(t.common.cancel),
+            onPressed: () => context.pop(),
+          ),
+          TextButton(
+            child: Text(t.update.goToGitHub),
+            onPressed: () {
+              launchUrl(Uri.parse(releasePageUrl));
+              context.pop();
+            },
+          ),
+          if (Platform.isAndroid)
             TextButton(
-              child: Text(t.common.cancel),
-              onPressed: () => context.pop(),
-            ),
-            TextButton(
-              child: Text(t.update.goToGitHub),
-              onPressed: () {
-                launchUrl(Uri.parse(releasePageUrl));
+              child: Text(t.update.downloadInstall),
+              onPressed: () async {
                 context.pop();
+                for (var apkUrl in temp.assets) {
+                  if (apkUrl.browserDownloadUrl.contains(arch) &&
+                      !apkUrl.browserDownloadUrl.contains("skia")) {
+                    await installApk(apkUrl.browserDownloadUrl);
+                  }
+                }
               },
             ),
-            if (Platform.isAndroid)
-              TextButton(
-                child: Text(t.update.downloadInstall),
-                onPressed: () async {
-                  context.pop();
-                  for (var apkUrl in temp.assets) {
-                    if (apkUrl.browserDownloadUrl.contains(arch) &&
-                        !apkUrl.browserDownloadUrl.contains("skia")) {
-                      await installApk(apkUrl.browserDownloadUrl);
-                    }
-                  }
-                },
-              ),
-          ],
-        );
-      },
-    );
-  }
+        ],
+      );
+    },
+  );
 }

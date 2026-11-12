@@ -45,7 +45,8 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
   PluginStoreCubit() : super(const PluginStoreState());
 
   Future<void> loadCloudPlugins() async {
-    emit(state.copyWith(cloudLoading: true, cloudError: ''));
+    if (isClosed) return;
+    _emit(state.copyWith(cloudLoading: true, cloudError: ''));
 
     try {
       final payload = await fetchCloudPluginListWithCdnFallback();
@@ -55,7 +56,7 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
           .where((item) => item.manifest.uuid.trim().isNotEmpty)
           .toList();
 
-      emit(
+      _emit(
         state.copyWith(
           cloudPlugins: entries,
           cloudLoading: false,
@@ -64,7 +65,7 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
       );
     } catch (e, stackTrace) {
       logger.w('拉取云端插件列表失败', error: e, stackTrace: stackTrace);
-      emit(
+      _emit(
         state.copyWith(
           cloudLoading: false,
           cloudError: t.plugin.cloudPluginsLoadFailed(error: e),
@@ -74,7 +75,7 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
   }
 
   Future<void> installFromCloud(CloudPluginItem item) async {
-    if (state.installing) {
+    if (isClosed || state.installing) {
       return;
     }
     final name = item.manifest.name.trim().isEmpty
@@ -99,7 +100,7 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
     List<int> bytes, {
     required String fileName,
   }) async {
-    if (state.installing) {
+    if (isClosed || state.installing) {
       return;
     }
     _beginInstall(t.plugin.installingFromLocal);
@@ -121,7 +122,7 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
   }
 
   Future<void> installFromNetworkUrl(String rawUrl) async {
-    if (state.installing) {
+    if (isClosed || state.installing) {
       return;
     }
     _beginInstall(t.plugin.installingFromNetwork);
@@ -142,16 +143,20 @@ class PluginStoreCubit extends Cubit<PluginStoreState> {
   }
 
   void _beginInstall(String message) {
-    emit(state.copyWith(installing: true, installMessage: message));
+    _emit(state.copyWith(installing: true, installMessage: message));
   }
 
   void _reportInstallFailure(String message) {
-    emit(state.copyWith(installing: false, installMessage: ''));
+    _emit(state.copyWith(installing: false, installMessage: ''));
     showErrorToast(message);
   }
 
   void _reportInstallSuccess(String message) {
-    emit(state.copyWith(installing: false, installMessage: ''));
+    _emit(state.copyWith(installing: false, installMessage: ''));
     showSuccessToast(message);
+  }
+
+  void _emit(PluginStoreState nextState) {
+    if (!isClosed) emit(nextState);
   }
 }

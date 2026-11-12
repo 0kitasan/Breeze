@@ -65,6 +65,7 @@ class ReaderHistoryController {
         epInfo: getEpInfo(),
       ),
     );
+    _service.markCurrentChapterRead();
   }
 
   void stop() {

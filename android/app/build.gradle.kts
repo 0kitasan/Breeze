@@ -60,10 +60,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_21.toString()
-    }
-
     java {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(21))
@@ -95,6 +91,22 @@ android {
                 "proguard-rules.pro",
             )
         }
+    }
+
+    packaging {
+        jniLibs {
+            // 等价于原来的 android:extractNativeLibs="true"（AGP 9 已禁止在
+            // manifest 里写该属性）：waifu2x CLI 的 .so 必须解包到
+            // nativeLibraryDir 才能被 Process.run 直接执行。
+            useLegacyPackaging = true
+        }
+    }
+}
+
+// kotlinOptions 在 Kotlin 2.2+ 已废弃，改用 compilerOptions
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
     }
 }
 

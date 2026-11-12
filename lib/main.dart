@@ -15,7 +15,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter_socks_proxy/socks_proxy.dart';
 import 'package:logger/logger.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -30,6 +29,8 @@ import 'package:zephyr/i18n/i18n_helper.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/i18n/system_locale_service.dart';
 import 'package:zephyr/network/http/wind_http.dart';
+import 'package:zephyr/util/network_policy.dart';
+import 'package:zephyr/util/proxy_setting.dart';
 import 'package:zephyr/network/sync/sync_device_id.dart';
 import 'package:zephyr/object_box/model.dart';
 import 'package:zephyr/object_box/object_box.dart';
@@ -49,12 +50,13 @@ import 'package:zephyr/util/font/font_profile.dart';
 import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/util/manage_cache.dart';
 import 'package:zephyr/util/rust_loader.dart';
+import 'package:zephyr/widgets/database_incompatible_app.dart';
 import 'package:zephyr/widgets/desktop/custom_title_bar.dart';
 import 'package:zephyr/widgets/desktop/intent.dart';
 import 'package:zephyr/main.dart';
 
 export 'package:zephyr/network/http/wind_http.dart'
-    show WindHttp, FetchResponse, fetch, fetchDirect;
+    show WindHttp, FetchResponse, FetchException, fetch, fetchDirect;
 
 ObjectBox? _objectbox;
 ObjectBox get objectbox => _objectbox!;
@@ -171,6 +173,8 @@ Future<void> main(List<String> args) async {
           child: const MyApp(),
         ),
       );
+    } on ObjectBoxSchemaMismatchException {
+      await _runDatabaseIncompatibleApp();
     } catch (e, stack) {
       // 捕获初始化阶段（_initServices）可能抛出的异常
       if (kDebugMode || sentryDsn.isEmpty) {
@@ -238,11 +242,27 @@ Future<void> main(List<String> args) async {
             ),
           ),
         );
+      } on ObjectBoxSchemaMismatchException {
+        await _runDatabaseIncompatibleApp();
       } catch (exception, stackTrace) {
         await Sentry.captureException(exception, stackTrace: stackTrace);
       }
     },
   );
+}
+
+/// 数据库版本高于当前代码时，用最小应用提示用户升级，而不是直接崩溃。
+Future<void> _runDatabaseIncompatibleApp() async {
+  try {
+    final systemInfo = await SystemLocaleService.getInfo();
+    final appLocale = I18nHelper.toAppLocale(systemInfo.locale);
+    if (appLocale != null) {
+      LocaleSettings.setLocale(appLocale);
+    }
+  } catch (_) {
+    // 语言探测失败时保持默认语言。
+  }
+  runApp(const DatabaseIncompatibleApp());
 }
 
 Future<(GlobalSettingCubit, PluginRegistryCubit)> _initServices() async {
@@ -331,24 +351,10 @@ Future<(GlobalSettingCubit, PluginRegistryCubit)> _initServices() async {
     await clearCache(await getCachePath());
   }
 
-  final proxySetting = globalSettingCubit.state.proxySetting;
-  if (proxySetting.enabled && proxySetting.address.trim().isNotEmpty) {
-    final proxyAddress = proxySetting.address.trim();
-    switch (proxySetting.type) {
-      case ProxyType.http:
-        final proxyUrl =
-            proxyAddress.startsWith('http://') ||
-                proxyAddress.startsWith('https://')
-            ? proxyAddress
-            : 'http://$proxyAddress';
-        setHttpProxy(proxy: proxyUrl);
-        // Dart 侧纯 dart:io HttpClient（如 minio / S3 同步）也走 HTTP 代理
-        SocksProxy.initProxy(proxy: 'PROXY ${_stripProxyScheme(proxyUrl)}');
-      case ProxyType.socks5:
-        SocksProxy.initProxy(proxy: 'SOCKS5 $proxyAddress');
-        setSocks5Proxy(proxy: proxyAddress);
-    }
-  }
+  applyProxySetting(globalSettingCubit.state.proxySetting);
+  applyPrivateNetworkPolicy(
+    blockPrivateNetwork: globalSettingCubit.state.blockPrivateNetwork,
+  );
 
   // 设置日志转发（包含flutter和qjs的日志）
   final logAddress = globalSettingCubit.state.logAddress;
@@ -398,19 +404,9 @@ Future<void> _tryApplyHttpProxyFromEnv() async {
   final reachable = await _probeProxyWithTimeout(proxyUrl);
   if (!reachable) return;
 
-  setHttpProxy(proxy: proxyUrl);
-}
-
-/// 去掉代理地址的协议前缀，得到 `host:port`，供 Dart 侧 HttpClient 使用。
-String _stripProxyScheme(String url) {
-  var value = url.trim();
-  for (final prefix in const ['https://', 'http://']) {
-    if (value.startsWith(prefix)) {
-      value = value.substring(prefix.length);
-      break;
-    }
-  }
-  return value;
+  applyProxySetting(
+    ProxySettingState(enabled: true, type: ProxyType.http, address: proxyUrl),
+  );
 }
 
 Future<String?> _readProxyFromEnvAsset() async {
@@ -438,6 +434,8 @@ Future<bool> _probeProxyWithTimeout(String proxyUrl) async {
       followRedirects: false,
     ).fetch('http://www.gstatic.com/generate_204');
     return response.status >= 200 && response.status < 500;
+  } on FetchException catch (e) {
+    return e.status >= 200 && e.status < 500;
   } catch (_) {
     return false;
   }

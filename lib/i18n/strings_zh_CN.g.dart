@@ -45,6 +45,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	/// zh-CN: 'Breeze'
 	String get appName => 'Breeze';
 
+	late final Translations$database$zh_CN database = Translations$database$zh_CN.internal(_root);
 	late final Translations$common$zh_CN common = Translations$common$zh_CN.internal(_root);
 	late final Translations$error$zh_CN error = Translations$error$zh_CN.internal(_root);
 	late final Translations$navigation$zh_CN navigation = Translations$navigation$zh_CN.internal(_root);
@@ -80,6 +81,18 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$notification$zh_CN notification = Translations$notification$zh_CN.internal(_root);
 	late final Translations$update$zh_CN update = Translations$update$zh_CN.internal(_root);
 	late final Translations$dialog$zh_CN dialog = Translations$dialog$zh_CN.internal(_root);
+}
+
+// Path: database
+class Translations$database$zh_CN {
+	Translations$database$zh_CN.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// zh-CN: '数据库不兼容，请使用更新版本的软件'
+	String get incompatible => '数据库不兼容，请使用更新版本的软件';
 }
 
 // Path: common
@@ -471,6 +484,12 @@ class Translations$settings$zh_CN {
 	/// zh-CN: '关闭后隐藏底部导航的云收藏页签'
 	String get showPluginCloudFavoriteSubtitle => '关闭后隐藏底部导航的云收藏页签';
 
+	/// zh-CN: '显示搜索书签'
+	String get showSearchBookmark => '显示搜索书签';
+
+	/// zh-CN: '关闭后隐藏更多页搜索书签入口与搜索结果页添加按钮'
+	String get showSearchBookmarkSubtitle => '关闭后隐藏更多页搜索书签入口与搜索结果页添加按钮';
+
 	/// zh-CN: '内容与网络'
 	String get contentAndNetwork => '内容与网络';
 
@@ -536,6 +555,12 @@ class Translations$settings$zh_CN {
 
 	/// zh-CN: 'SOCKS5'
 	String get proxyTypeSocks5 => 'SOCKS5';
+
+	/// zh-CN: '内网拦截'
+	String get blockPrivateNetwork => '内网拦截';
+
+	/// zh-CN: '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭'
+	String get blockPrivateNetworkSubtitle => '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭';
 
 	/// zh-CN: '更新下载加速'
 	String get updateAccelerate => '更新下载加速';
@@ -1746,6 +1771,12 @@ class Translations$reader$zh_CN {
 	/// zh-CN: '阅读时切换为横屏，离开后恢复原来的方向'
 	String get landscapeReaderSubtitle => '阅读时切换为横屏，离开后恢复原来的方向';
 
+	/// zh-CN: '横屏自动双页'
+	String get autoDoublePage => '横屏自动双页';
+
+	/// zh-CN: '横屏时自动切换为双页，竖屏时自动切换回单页'
+	String get autoDoublePageSubtitle => '横屏时自动切换为双页，竖屏时自动切换回单页';
+
 	/// zh-CN: '显示状态栏'
 	String get showStatusBar => '显示状态栏';
 
@@ -2034,8 +2065,8 @@ class Translations$plugin$zh_CN {
 	/// zh-CN: '网络安装'
 	String get networkInstall => '网络安装';
 
-	/// zh-CN: '云端组件'
-	String get cloudComponents => '云端组件';
+	/// zh-CN: '云端插件'
+	String get cloudPlugins => '云端插件';
 
 	/// zh-CN: '请在网页中完成登录，宿主会自动同步 Cookie'
 	String get loginSuccess => '请在网页中完成登录，宿主会自动同步 Cookie';
@@ -2166,8 +2197,8 @@ class Translations$plugin$zh_CN {
 	/// zh-CN: '下载更新'
 	String get downloadUpdate => '下载更新';
 
-	/// zh-CN: '暂无云端组件'
-	String get noCloudPlugins => '暂无云端组件';
+	/// zh-CN: '暂无云端插件'
+	String get noCloudPlugins => '暂无云端插件';
 
 	/// zh-CN: '没有匹配的插件'
 	String get noMatchingPlugins => '没有匹配的插件';
@@ -2175,8 +2206,8 @@ class Translations$plugin$zh_CN {
 	/// zh-CN: '请输入插件脚本 URL'
 	String get networkInstallHint => '请输入插件脚本 URL';
 
-	/// zh-CN: '云端组件列表加载失败: $error'
-	String cloudPluginsLoadFailed({required Object error}) => '云端组件列表加载失败: ${error}';
+	/// zh-CN: '云端插件列表加载失败: $error'
+	String cloudPluginsLoadFailed({required Object error}) => '云端插件列表加载失败: ${error}';
 
 	/// zh-CN: '正在下载并安装 $name...'
 	String installingFromCloud({required Object name}) => '正在下载并安装 ${name}...';
@@ -3182,6 +3213,9 @@ class Translations$more$zh_CN {
 
 	/// zh-CN: '更新日志'
 	String get changelog => '更新日志';
+
+	/// zh-CN: '新'
+	String get newBadge => '新';
 }
 
 // Path: search
@@ -4071,6 +4105,12 @@ class Translations$update$zh_CN {
 	/// zh-CN: '发现新版本'
 	String get newVersion => '发现新版本';
 
+	/// zh-CN: '一周内不再提醒'
+	String get snoozeWeek => '一周内不再提醒';
+
+	/// zh-CN: '已设置：一周内不再提醒'
+	String get snoozeWeekSuccess => '已设置：一周内不再提醒';
+
 	/// zh-CN: '前往GitHub'
 	String get goToGitHub => '前往GitHub';
 
@@ -4111,6 +4151,7 @@ extension on Translations {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
 			'appName' => 'Breeze',
+			'database.incompatible' => '数据库不兼容，请使用更新版本的软件',
 			'common.ok' => '确定',
 			'common.cancel' => '取消',
 			'common.save' => '保存',
@@ -4229,6 +4270,8 @@ extension on Translations {
 			'settings.showPluginHomeSubtitle' => '关闭后隐藏底部导航的首页页签',
 			'settings.showPluginCloudFavorite' => '显示云收藏',
 			'settings.showPluginCloudFavoriteSubtitle' => '关闭后隐藏底部导航的云收藏页签',
+			'settings.showSearchBookmark' => '显示搜索书签',
+			'settings.showSearchBookmarkSubtitle' => '关闭后隐藏更多页搜索书签入口与搜索结果页添加按钮',
 			'settings.contentAndNetwork' => '内容与网络',
 			'settings.content' => '内容',
 			'settings.network' => '网络',
@@ -4251,6 +4294,8 @@ extension on Translations {
 			'settings.proxyTypeSubtitle' => '选择代理协议',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.blockPrivateNetwork' => '内网拦截',
+			'settings.blockPrivateNetworkSubtitle' => '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭',
 			'settings.updateAccelerate' => '更新下载加速',
 			'settings.updateAccelerateSubtitle' => '开启后优先使用代理加速 GitHub 更新链接',
 			'settings.retryDownloadUntilSuccess' => '下载失败后持续重试',
@@ -4617,13 +4662,13 @@ extension on Translations {
 			'reader.perComicReadMode' => '启用本漫画设置',
 			'reader.perComicReadModeSubtitle' => '仅当前漫画生效',
 			'reader.perComicFollowGlobal' => '跟随全局',
+			_ => null,
+		} ?? switch (path) {
 			'reader.perComicGlobalIs' => '全局为',
 			'reader.perComicThisComic' => '本漫',
 			'reader.infoDisplay' => '信息项显示',
 			'reader.pageNumber' => '页数',
 			'reader.pageNumberSubtitle' => '显示当前页/总页数',
-			_ => null,
-		} ?? switch (path) {
 			'reader.networkStatus' => '网络状态',
 			'reader.networkStatusSubtitle' => 'Linux 下可能不准确',
 			'reader.battery' => '电量',
@@ -4647,6 +4692,8 @@ extension on Translations {
 			'reader.doublePageLeadingBlankSubtitle' => '在每章最前插入一页空白，使配对整体错一位',
 			'reader.landscapeReader' => '横屏阅读',
 			'reader.landscapeReaderSubtitle' => '阅读时切换为横屏，离开后恢复原来的方向',
+			'reader.autoDoublePage' => '横屏自动双页',
+			'reader.autoDoublePageSubtitle' => '横屏时自动切换为双页，竖屏时自动切换回单页',
 			'reader.showStatusBar' => '显示状态栏',
 			'reader.showStatusBarSubtitle' => '阅读时保留顶部状态栏，仅隐藏底部导航栏',
 			'reader.themeMode' => '系统模式',
@@ -4740,7 +4787,7 @@ extension on Translations {
 			'plugin.searchHint' => '搜索插件名称或作者...',
 			'plugin.localInstall' => '本地安装',
 			'plugin.networkInstall' => '网络安装',
-			'plugin.cloudComponents' => '云端组件',
+			'plugin.cloudPlugins' => '云端插件',
 			'plugin.loginSuccess' => '请在网页中完成登录，宿主会自动同步 Cookie',
 			'plugin.chromiumFallbackUnsupported' => '当前平台不支持外部 Chromium 自动登录回退',
 			'plugin.switchingToExternalBrowser' => '内置 WebView 登录受限，正在切换外部浏览器...',
@@ -4784,10 +4831,10 @@ extension on Translations {
 			'plugin.githubRepo' => 'GitHub 仓库',
 			'plugin.download' => '下载',
 			'plugin.downloadUpdate' => '下载更新',
-			'plugin.noCloudPlugins' => '暂无云端组件',
+			'plugin.noCloudPlugins' => '暂无云端插件',
 			'plugin.noMatchingPlugins' => '没有匹配的插件',
 			'plugin.networkInstallHint' => '请输入插件脚本 URL',
-			'plugin.cloudPluginsLoadFailed' => ({required Object error}) => '云端组件列表加载失败: ${error}',
+			'plugin.cloudPluginsLoadFailed' => ({required Object error}) => '云端插件列表加载失败: ${error}',
 			'plugin.installingFromCloud' => ({required Object name}) => '正在下载并安装 ${name}...',
 			'plugin.installingFromLocal' => '正在安装本地插件...',
 			'plugin.installingFromNetwork' => '正在下载网络插件...',
@@ -5093,6 +5140,7 @@ extension on Translations {
 			'more.sync' => '同步',
 			'more.comicFollow' => '追更',
 			'more.changelog' => '更新日志',
+			'more.newBadge' => '新',
 			'search.title' => '搜索',
 			'search.searchHint' => '搜索...',
 			'search.selectSource' => '选择漫画源',
@@ -5128,6 +5176,8 @@ extension on Translations {
 			'discover.title' => '发现',
 			'discover.search' => '搜索',
 			'discover.settings' => '设置',
+			_ => null,
+		} ?? switch (path) {
 			'discover.pluginManagement' => '插件管理',
 			'discover.customOrder' => '自定义插件顺序',
 			'discover.resetOrder' => '恢复默认顺序',
@@ -5136,8 +5186,6 @@ extension on Translations {
 			'discover.browseInstall' => '浏览安装',
 			'discover.noPluginForSearch' => '暂无可用插件，无法搜索',
 			'discover.pluginInfoLoadFailed' => ({required Object error}) => '插件信息加载失败: ${error}',
-			_ => null,
-		} ?? switch (path) {
 			'discover.pluginCapability' => '插件能力',
 			'discover.disabled' => '已关闭',
 			'discover.unnamed' => '未命名',
@@ -5343,6 +5391,8 @@ extension on Translations {
 			'notification.permissionRequired' => '请开启通知权限',
 			'notification.macPermissionRequired' => '请在系统设置中开启通知权限',
 			'update.newVersion' => '发现新版本',
+			'update.snoozeWeek' => '一周内不再提醒',
+			'update.snoozeWeekSuccess' => '已设置：一周内不再提醒',
 			'update.goToGitHub' => '前往GitHub',
 			'update.downloadInstall' => '下载安装',
 			'update.apkDownloadFailed' => '下载失败，请稍后再试！',

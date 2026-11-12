@@ -40,6 +40,7 @@ class TranslationsEnUs extends Translations with BaseTranslations<AppLocale, Tra
 
 	// Translations
 	@override String get appName => 'Breeze';
+	@override late final _Translations$database$en_US database = _Translations$database$en_US._(_root);
 	@override late final _Translations$common$en_US common = _Translations$common$en_US._(_root);
 	@override late final _Translations$error$en_US error = _Translations$error$en_US._(_root);
 	@override late final _Translations$navigation$en_US navigation = _Translations$navigation$en_US._(_root);
@@ -75,6 +76,16 @@ class TranslationsEnUs extends Translations with BaseTranslations<AppLocale, Tra
 	@override late final _Translations$notification$en_US notification = _Translations$notification$en_US._(_root);
 	@override late final _Translations$update$en_US update = _Translations$update$en_US._(_root);
 	@override late final _Translations$dialog$en_US dialog = _Translations$dialog$en_US._(_root);
+}
+
+// Path: database
+class _Translations$database$en_US extends Translations$database$zh_CN {
+	_Translations$database$en_US._(TranslationsEnUs root) : this._root = root, super.internal(root);
+
+	final TranslationsEnUs _root; // ignore: unused_field
+
+	// Translations
+	@override String get incompatible => 'The database is incompatible. Please update to a newer version.';
 }
 
 // Path: common
@@ -229,6 +240,8 @@ class _Translations$settings$en_US extends Translations$settings$zh_CN {
 	@override String get showPluginHomeSubtitle => 'Hide the home tab in the bottom navigation when off';
 	@override String get showPluginCloudFavorite => 'Show cloud favorites';
 	@override String get showPluginCloudFavoriteSubtitle => 'Hide the cloud favorites tab in the bottom navigation when off';
+	@override String get showSearchBookmark => 'Show search bookmarks';
+	@override String get showSearchBookmarkSubtitle => 'Hide the search bookmarks entry in More and the add button in search results when off';
 	@override String get contentAndNetwork => 'Content & Network';
 	@override String get content => 'Content';
 	@override String get network => 'Network';
@@ -251,6 +264,8 @@ class _Translations$settings$en_US extends Translations$settings$zh_CN {
 	@override String get proxyTypeSubtitle => 'Choose proxy protocol';
 	@override String get proxyTypeHttp => 'HTTP';
 	@override String get proxyTypeSocks5 => 'SOCKS5';
+	@override String get blockPrivateNetwork => 'Block private network';
+	@override String get blockPrivateNetworkSubtitle => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default';
 	@override String get updateAccelerate => 'Update acceleration';
 	@override String get updateAccelerateSubtitle => 'Use proxy to accelerate GitHub update links';
 	@override String get retryDownloadUntilSuccess => 'Keep retrying failed downloads';
@@ -672,6 +687,8 @@ class _Translations$reader$en_US extends Translations$reader$zh_CN {
 	@override String get doublePageLeadingBlankSubtitle => 'Insert a blank page at the start of each chapter to shift page pairing';
 	@override String get landscapeReader => 'Landscape reading';
 	@override String get landscapeReaderSubtitle => 'Switch to landscape while reading and restore the previous direction when you leave';
+	@override String get autoDoublePage => 'Auto double page in landscape';
+	@override String get autoDoublePageSubtitle => 'Switch to double page in landscape and back to single page in portrait';
 	@override String get showStatusBar => 'Show status bar';
 	@override String get showStatusBarSubtitle => 'Keep the top status bar while reading, hide only the bottom navigation bar';
 	@override String get themeMode => 'Theme mode';
@@ -774,7 +791,7 @@ class _Translations$plugin$en_US extends Translations$plugin$zh_CN {
 	@override String get searchHint => 'Search plugin name or author...';
 	@override String get localInstall => 'Local install';
 	@override String get networkInstall => 'Network install';
-	@override String get cloudComponents => 'Cloud components';
+	@override String get cloudPlugins => 'Cloud plugins';
 	@override String get loginSuccess => 'Please complete login in the browser, the host will sync cookies automatically';
 	@override String get chromiumFallbackUnsupported => 'External Chromium auto-login fallback is not supported on this platform';
 	@override String get switchingToExternalBrowser => 'Built-in WebView login is limited, switching to external browser...';
@@ -817,10 +834,10 @@ class _Translations$plugin$en_US extends Translations$plugin$zh_CN {
 	@override String get githubRepo => 'GitHub Repo';
 	@override String get download => 'Download';
 	@override String get downloadUpdate => 'Download update';
-	@override String get noCloudPlugins => 'No cloud components';
+	@override String get noCloudPlugins => 'No cloud plugins';
 	@override String get noMatchingPlugins => 'No matching plugins';
 	@override String get networkInstallHint => 'Enter plugin script URL';
-	@override String cloudPluginsLoadFailed({required Object error}) => 'Failed to load cloud components: ${error}';
+	@override String cloudPluginsLoadFailed({required Object error}) => 'Failed to load cloud plugins: ${error}';
 	@override String installingFromCloud({required Object name}) => 'Downloading and installing ${name}...';
 	@override String get installingFromLocal => 'Installing local plugin...';
 	@override String get installingFromNetwork => 'Downloading network plugin...';
@@ -1216,6 +1233,7 @@ class _Translations$more$en_US extends Translations$more$zh_CN {
 	@override String get sync => 'Sync';
 	@override String get comicFollow => 'Updates';
 	@override String get changelog => 'Changelog';
+	@override String get newBadge => 'NEW';
 }
 
 // Path: search
@@ -1608,6 +1626,8 @@ class _Translations$update$en_US extends Translations$update$zh_CN {
 
 	// Translations
 	@override String get newVersion => 'New version available';
+	@override String get snoozeWeek => 'Don\'t remind for a week';
+	@override String get snoozeWeekSuccess => 'No update reminders for the next week';
 	@override String get goToGitHub => 'Go to GitHub';
 	@override String get downloadInstall => 'Download & install';
 	@override String get apkDownloadFailed => 'Download failed, please try again later';
@@ -1635,6 +1655,7 @@ extension on TranslationsEnUs {
 	dynamic _flatMapFunction(String path) {
 		return switch (path) {
 			'appName' => 'Breeze',
+			'database.incompatible' => 'The database is incompatible. Please update to a newer version.',
 			'common.ok' => 'OK',
 			'common.cancel' => 'Cancel',
 			'common.save' => 'Save',
@@ -1753,6 +1774,8 @@ extension on TranslationsEnUs {
 			'settings.showPluginHomeSubtitle' => 'Hide the home tab in the bottom navigation when off',
 			'settings.showPluginCloudFavorite' => 'Show cloud favorites',
 			'settings.showPluginCloudFavoriteSubtitle' => 'Hide the cloud favorites tab in the bottom navigation when off',
+			'settings.showSearchBookmark' => 'Show search bookmarks',
+			'settings.showSearchBookmarkSubtitle' => 'Hide the search bookmarks entry in More and the add button in search results when off',
 			'settings.contentAndNetwork' => 'Content & Network',
 			'settings.content' => 'Content',
 			'settings.network' => 'Network',
@@ -1775,6 +1798,8 @@ extension on TranslationsEnUs {
 			'settings.proxyTypeSubtitle' => 'Choose proxy protocol',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.blockPrivateNetwork' => 'Block private network',
+			'settings.blockPrivateNetworkSubtitle' => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default',
 			'settings.updateAccelerate' => 'Update acceleration',
 			'settings.updateAccelerateSubtitle' => 'Use proxy to accelerate GitHub update links',
 			'settings.retryDownloadUntilSuccess' => 'Keep retrying failed downloads',
@@ -2141,13 +2166,13 @@ extension on TranslationsEnUs {
 			'reader.perComicReadMode' => 'Enable per-comic settings',
 			'reader.perComicReadModeSubtitle' => 'Only applies to the current comic',
 			'reader.perComicFollowGlobal' => 'Follow global',
+			_ => null,
+		} ?? switch (path) {
 			'reader.perComicGlobalIs' => 'Global is',
 			'reader.perComicThisComic' => 'This comic',
 			'reader.infoDisplay' => 'Info display',
 			'reader.pageNumber' => 'Page number',
 			'reader.pageNumberSubtitle' => 'Show current/total page count',
-			_ => null,
-		} ?? switch (path) {
 			'reader.networkStatus' => 'Network status',
 			'reader.networkStatusSubtitle' => 'May be inaccurate on Linux',
 			'reader.battery' => 'Battery',
@@ -2171,6 +2196,8 @@ extension on TranslationsEnUs {
 			'reader.doublePageLeadingBlankSubtitle' => 'Insert a blank page at the start of each chapter to shift page pairing',
 			'reader.landscapeReader' => 'Landscape reading',
 			'reader.landscapeReaderSubtitle' => 'Switch to landscape while reading and restore the previous direction when you leave',
+			'reader.autoDoublePage' => 'Auto double page in landscape',
+			'reader.autoDoublePageSubtitle' => 'Switch to double page in landscape and back to single page in portrait',
 			'reader.showStatusBar' => 'Show status bar',
 			'reader.showStatusBarSubtitle' => 'Keep the top status bar while reading, hide only the bottom navigation bar',
 			'reader.themeMode' => 'Theme mode',
@@ -2264,7 +2291,7 @@ extension on TranslationsEnUs {
 			'plugin.searchHint' => 'Search plugin name or author...',
 			'plugin.localInstall' => 'Local install',
 			'plugin.networkInstall' => 'Network install',
-			'plugin.cloudComponents' => 'Cloud components',
+			'plugin.cloudPlugins' => 'Cloud plugins',
 			'plugin.loginSuccess' => 'Please complete login in the browser, the host will sync cookies automatically',
 			'plugin.chromiumFallbackUnsupported' => 'External Chromium auto-login fallback is not supported on this platform',
 			'plugin.switchingToExternalBrowser' => 'Built-in WebView login is limited, switching to external browser...',
@@ -2307,10 +2334,10 @@ extension on TranslationsEnUs {
 			'plugin.githubRepo' => 'GitHub Repo',
 			'plugin.download' => 'Download',
 			'plugin.downloadUpdate' => 'Download update',
-			'plugin.noCloudPlugins' => 'No cloud components',
+			'plugin.noCloudPlugins' => 'No cloud plugins',
 			'plugin.noMatchingPlugins' => 'No matching plugins',
 			'plugin.networkInstallHint' => 'Enter plugin script URL',
-			'plugin.cloudPluginsLoadFailed' => ({required Object error}) => 'Failed to load cloud components: ${error}',
+			'plugin.cloudPluginsLoadFailed' => ({required Object error}) => 'Failed to load cloud plugins: ${error}',
 			'plugin.installingFromCloud' => ({required Object name}) => 'Downloading and installing ${name}...',
 			'plugin.installingFromLocal' => 'Installing local plugin...',
 			'plugin.installingFromNetwork' => 'Downloading network plugin...',
@@ -2616,6 +2643,7 @@ extension on TranslationsEnUs {
 			'more.sync' => 'Sync',
 			'more.comicFollow' => 'Updates',
 			'more.changelog' => 'Changelog',
+			'more.newBadge' => 'NEW',
 			'search.title' => 'Search',
 			'search.searchHint' => 'Search...',
 			'search.selectSource' => 'Select Source',
@@ -2652,6 +2680,8 @@ extension on TranslationsEnUs {
 			'discover.search' => 'Search',
 			'discover.settings' => 'Settings',
 			'discover.pluginManagement' => 'Plugin Management',
+			_ => null,
+		} ?? switch (path) {
 			'discover.customOrder' => 'Custom plugin order',
 			'discover.resetOrder' => 'Reset order',
 			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
@@ -2660,8 +2690,6 @@ extension on TranslationsEnUs {
 			'discover.noPluginForSearch' => 'No plugins available, cannot search',
 			'discover.pluginInfoLoadFailed' => ({required Object error}) => 'Failed to load plugin info: ${error}',
 			'discover.pluginCapability' => 'Plugin Capability',
-			_ => null,
-		} ?? switch (path) {
 			'discover.disabled' => 'Disabled',
 			'discover.unnamed' => 'Unnamed',
 			'discover.pluginEnableFailed' => ({required Object error}) => 'Failed to enable plugin: ${error}',
@@ -2866,6 +2894,8 @@ extension on TranslationsEnUs {
 			'notification.permissionRequired' => 'Please enable notification permission',
 			'notification.macPermissionRequired' => 'Please enable notification permission in system settings',
 			'update.newVersion' => 'New version available',
+			'update.snoozeWeek' => 'Don\'t remind for a week',
+			'update.snoozeWeekSuccess' => 'No update reminders for the next week',
 			'update.goToGitHub' => 'Go to GitHub',
 			'update.downloadInstall' => 'Download & install',
 			'update.apkDownloadFailed' => 'Download failed, please try again later',
