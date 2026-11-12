@@ -605,22 +605,36 @@ async fn http_request_inner_async(
     let method =
         Method::from_bytes(method.as_bytes()).context(crate::tr!("failed-to-parse-http-method"))?;
 
+    // ECH：URL 保持域名、SNI 加密（外层是 ECHConfig 的 public_name）。
+    // 命中 ECH 表时用专用 client，并跳过 DNS 校验——IP 在登记时已校验，
+    // 而这里的 DNS 查询本身可能被污染（前置路径也是同样的处理）。
+    let ech_client = super::ech::ech_client_for(&runtime, &url).await;
+
     // 域名前置：命中前置表的请求会被改写成「连真实 IP + 不发 SNI + 带 Host 头」。
     // 必须在校验目标之前完成改写，否则会先对墙内解析不到的域名做一次 DNS 查询。
     // feature 关闭时该调用被编译成直接返回 None，热路径没有额外开销。
-    let front_target = resolve_front_target(&runtime, &url)?;
+    let front_target = if ech_client.is_some() {
+        None
+    } else {
+        resolve_front_target(&runtime, &url)?
+    };
     let request_url = match &front_target {
         Some(target) => super::fronting::front_url_with_ip(&url, &target.ip)?,
         None => url.clone(),
     };
 
-    ensure_http_target_allowed(&request_url).await?;
+    if ech_client.is_none() {
+        ensure_http_target_allowed(&request_url).await?;
+    }
     let mut headers_map = Map::new();
     let headers_value: Value = serde_json::from_str(&headers_json)
         .context(crate::tr!("failed-to-parse-http-headers-json"))?;
-    let client = match &front_target {
-        Some(_) => super::fronting::cached_front_client(&worker_http_config())?,
-        None => http_client()?,
+    let client = match &ech_client {
+        Some(client) => client.clone(),
+        None => match &front_target {
+            Some(_) => super::fronting::cached_front_client(&worker_http_config())?,
+            None => http_client()?,
+        },
     };
     let mut formdata_body = false;
     let mut plain_headers: Vec<(String, String)> = Vec::new();
@@ -680,7 +694,7 @@ async fn http_request_inner_async(
     }
 
     // 计时起点放在 `send()` 之前：`ttfbMs` 因此包含 TCP 建连 + TLS 握手 +
-    // 服务端处理 + 首字节，与 `__http_probe_front_hosts` 的 `ttfbMs` 同义。
+    // 服务端处理 + 首字节，与 `fronting.probe` 的 `ttfbMs` 同义。
     let request_started = Instant::now();
 
     // 连接级失败才把 IP 标记为不健康：4xx/5xx 说明这个 IP 活着，
@@ -690,6 +704,11 @@ async fn http_request_inner_async(
         Err(error) => {
             if let Some(target) = &front_target {
                 super::fronting::mark_front_host_unhealthy(&runtime, &target.ip);
+            }
+            if ech_client.is_some() {
+                // ECH 的 TLS 抖动（如 InvalidContentType）重建一次大概率就好，
+                // 丢掉缓存让下一次请求重新拉 ECHConfig / 换 hint IP。
+                super::ech::invalidate_ech_client(&runtime, &url);
             }
             return Err(error).context(crate::tr!("failed-to-send-http-request"));
         }

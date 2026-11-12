@@ -51,7 +51,8 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.zephyr.breeze"
-    compileSdk = 36
+    // androidx.core 1.19.0 起要求依赖方至少用 API 37 编译（AAR metadata 校验）
+    compileSdk = 37
     ndkVersion = "29.0.14206865"
 
     compileOptions {

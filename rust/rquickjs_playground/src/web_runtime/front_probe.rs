@@ -1,7 +1,8 @@
 //! 前置 IP 延迟探测。
 //!
-//! 插件通过 `__http_probe_front_hosts(JSON.stringify({...}))` 调用。设计目标是
-//! **不暴露原始 TCP/UDP**，只提供「给一个域名 + 一组 IP，量一下延迟」：
+//! 插件侧入口是 `fronting.probe(payload, { signal })`（`js/35_fronting.js`），
+//! 下面是它封装的内部实现 `__http_probe_front_hosts(JSON.stringify({...}))`。
+//! 设计目标是 **不暴露原始 TCP/UDP**，只提供「给一个域名 + 一组 IP，量一下延迟」：
 //!
 //! - `host` 必须是合法域名（用于 `Host` 头 / SNI），不必先写进前置表；
 //! - `ips` 可选：缺省测当前前置表里该 host 的全部 IP；显式传入时直接测这些 IP，

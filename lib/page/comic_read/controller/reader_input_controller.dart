@@ -13,6 +13,7 @@ import 'package:zephyr/page/comic_read/method/key.dart';
 import 'package:zephyr/page/comic_read/method/reader_gesture_logic.dart';
 import 'package:zephyr/page/comic_read/method/zoomed_scroll_handoff.dart';
 import 'package:zephyr/page/comic_read/widgets/layout/read_layout.dart';
+import 'package:zephyr/page/comic_read/widgets/settings/reader_scroll_experiment_switch.dart';
 
 /// 阅读器输入控制器。
 ///
@@ -65,10 +66,24 @@ class ReaderInputController {
 
   void init() {
     transformationController.addListener(_onTransformationChanged);
+    zoomedContinuousScrollEnabled.addListener(_onExperimentChanged);
   }
 
   void dispose() {
+    transformationController.removeListener(_onTransformationChanged);
+    zoomedContinuousScrollEnabled.removeListener(_onExperimentChanged);
+    _zoomedScrollHandoff.cancel();
     focusNode.dispose();
+  }
+
+  bool get isUserInteracting =>
+      zoomedContinuousScrollEnabled.value &&
+      isColumnReadMode(context.readEffectiveReadMode()) &&
+      (_activeTouchPointers.isNotEmpty || _zoomedScrollHandoff.isActive);
+
+  void _onExperimentChanged() {
+    _zoomedScrollHandoff.cancel();
+    if (context.mounted) onRefreshState();
   }
 
   /// 构建阅读核心交互层：键盘、手势、缩放、多指锁滚动。
@@ -112,11 +127,15 @@ class ReaderInputController {
                 details: details,
                 transformation: transformationController,
                 scrollController: scrollController,
-                enabled: isColumnReadMode(readSetting.readMode),
+                enabled: zoomedContinuousScrollEnabled.value &&
+                    isColumnReadMode(readSetting.readMode),
               );
               _updateMultiTouchScrollLock();
             },
-            onInteractionEnd: (_) => _updateMultiTouchScrollLock(),
+            onInteractionEnd: (details) {
+              _zoomedScrollHandoff.end(details);
+              _updateMultiTouchScrollLock();
+            },
             child: isColumnReadMode(readSetting.readMode)
                 ? buildColumnMode(readSetting.doublePageMode)
                 : buildRowMode(),
@@ -218,12 +237,14 @@ class ReaderInputController {
   void _onPointerDown(PointerDownEvent event) {
     if (!_isTouchPointer(event.kind)) return;
     _activeTouchPointers.add(event.pointer);
+    if (zoomedContinuousScrollEnabled.value) _zoomedScrollHandoff.cancel();
     _updateMultiTouchScrollLock();
   }
 
   void _onPointerUpOrCancel(PointerEvent event) {
     if (!_isTouchPointer(event.kind)) return;
     _activeTouchPointers.remove(event.pointer);
+    if (event is PointerCancelEvent) _zoomedScrollHandoff.cancel();
     _updateMultiTouchScrollLock();
   }
 
@@ -274,6 +295,7 @@ class ReaderInputController {
 
   /// 翻页前统一归位缩放与位移，避免跨页后仍停留在局部放大状态。
   bool resetViewerTransformIfNeeded() {
+    _zoomedScrollHandoff.cancel();
     final matrix = transformationController.value;
     final scale = matrix.getMaxScaleOnAxis();
     final tx = matrix.storage[12].abs();

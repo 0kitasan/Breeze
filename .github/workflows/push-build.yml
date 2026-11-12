@@ -81,6 +81,11 @@ jobs:
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v4
 
+      # compileSdk 37（androidx.core 1.19 起的 AAR metadata 要求）对应的平台与
+      # build-tools 显式预装，避免 Gradle 构建时再临时下载
+      - name: 安装 Android SDK Platform 37
+        run: yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+
       - name: 设置 Dart SDK
         uses: dart-lang/setup-dart@v1
 
@@ -103,11 +108,14 @@ jobs:
           workspaces: |
             rust
 
-      - name: 读取 NDK 版本配置
+      - name: 读取 Android SDK 和 NDK 版本配置
         id: ndk-config
         run: |
           NDK_VER=$(grep "ndkVersion" android/app/build.gradle.kts | awk -F'"' '{print $2}')
           echo "ndk_version=$NDK_VER" >> $GITHUB_OUTPUT
+          COMPILE_SDK=$(sed -n 's/^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*\([0-9][0-9]*\).*/\1/p' android/app/build.gradle.kts)
+          [[ "$COMPILE_SDK" =~ ^[0-9]+$ ]] || { echo "Unable to read compileSdk" >&2; exit 1; }
+          echo "compile_sdk=$COMPILE_SDK" >> $GITHUB_OUTPUT
 
       - name: 缓存 Android NDK
         uses: actions/cache@v5
@@ -116,7 +124,7 @@ jobs:
           key: ${{ runner.os }}-android-ndk-${{ steps.ndk-config.outputs.ndk_version }}
 
       - name: 安装 Android NDK
-        run: sdkmanager "ndk;${{ steps.ndk-config.outputs.ndk_version }}" "platforms;android-36" "cmake;3.22.1"
+        run: sdkmanager "ndk;${{ steps.ndk-config.outputs.ndk_version }}" "platforms;android-${{ steps.ndk-config.outputs.compile_sdk }}" "cmake;3.22.1"
 
       - name: 设置 NDK 环境变量
         run: |
