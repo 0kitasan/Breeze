@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:zephyr/platform/desktop/desktop_window.dart';
 
 /// 阅读器桌面端全屏服务。
 ///
@@ -20,13 +20,15 @@ class ReaderDesktopFullscreenService {
   /// 查询当前窗口是否处于全屏状态。
   Future<bool> isFullscreen() async {
     if (!_isDesktopPlatform) return false;
-    return windowManager.isFullScreen();
+    return mainWindow?.isFullScreen ?? false;
   }
 
   /// 设置窗口全屏状态，并同步全局通知。
   Future<void> setFullscreen(bool value) async {
     if (!_isDesktopPlatform) return;
-    await windowManager.setFullScreen(value);
+    final window = mainWindow;
+    if (window == null) return;
+    window.isFullScreen = value;
     _setFullscreen(value);
   }
 

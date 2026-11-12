@@ -1,7 +1,7 @@
 name: zephyr
 description: "使用Flutter开发的漫画阅读应用，使用插件提供漫画源支持。"
 publish_to: none
-version: 3.0.37+2225
+version: 3.0.38+2225
 
 environment:
   sdk: ^3.14.0
@@ -61,8 +61,8 @@ dependencies:
   open_file: ^4.0.0 # 文件: 系统打开文件
   gal: ^2.3.2 # 媒体: 保存到系统相册
   pool: ^1.5.2 # 工具: 并发资源池
-  window_manager: ^0.5.1 # 桌面: 窗口控制
-  screen_retriever: ^0.2.2 # 桌面: 屏幕信息
+  window_manager: ^0.7.0 # 桌面: 窗口控制
+  screen_retriever: ^0.4.0 # 桌面: 屏幕信息
   # 桌面: 系统托盘
   # 走 git 锁定：pub 上的 0.8.3 仍锁 nativeapi ^0.5.9，而 nativeapi 0.5.x 的
   # 主入口连带导出实验性 runNativeApp（依赖 Dart 3.14 已移除的 Isolate.create），
@@ -72,7 +72,6 @@ dependencies:
     git:
       url: https://github.com/leanflutter/tray_manager.git
       ref: 7863f4a75b0e828428e33431ab9aa2f0798dd885
-  win32: ^6.0.1 # 平台: Windows API
   battery_plus: ^7.0.0 # 设备: 电池信息
   permission_guard: ^2.0.1 # 权限: 请求封装
   package_info_plus: ^10.0.0 # 应用: 版本信息
@@ -81,7 +80,7 @@ dependencies:
 
   # 后台任务与通知
   flutter_foreground_task: ^11.0.1 # 后台: 前台任务
-  flutter_local_notifications: ^22.0.0 # 通知: 本地通知
+  flutter_local_notifications: ^23.0.1 # 通知: 本地通知
 
   # 安全、工具与运行时
   encrypter_plus: ^5.1.0 # 安全: AES/RSA 加密
@@ -97,13 +96,12 @@ dependencies:
   native_toolchain_rust: ^1.0.4 # FFI: Rust 构建工具
   hooks: ^2.1.0 # FFI: Dart 构建钩子
   flutter_rust_bridge: ^2.10.0 # FFI: Flutter-Rust 桥接
-  ffi: ^2.2.0 # FFI: Dart 原生互操作
   sentry_flutter: ^10.0.0 # 监控: 崩溃与异常上报
   vm_service: ^15.0.2 # 监控: 运行时内存监控
   worker_manager: ^7.2.9 # 并发: 全局 Isolate 任务池管理
   coreml_upscale: # MacOS/iOS 超分
     path: packages/coreml_upscale
-  flutter_sticky_header: ^0.8.0 # UI: 分组吸顶组头
+  flutter_sticky_header: ^0.11.0 # UI: 分组吸顶组头
 
 dev_dependencies:
   # 测试与规范
