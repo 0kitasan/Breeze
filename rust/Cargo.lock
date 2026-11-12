@@ -3436,6 +3436,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "rquickjs",
+ "rustls",
  "scraper",
  "serde",
  "serde_json",
@@ -3448,6 +3449,7 @@ dependencies = [
  "unic-langid",
  "url",
  "uuid",
+ "webpki-roots",
  "writeable",
 ]
 

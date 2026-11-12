@@ -51,6 +51,9 @@ mod fs_ops;
 mod front_probe;
 #[cfg_attr(not(feature = "host-fronting"), allow(dead_code))]
 mod fronting;
+// ECH 表只在 host-fronting feature 下注册；模块本身常编译，热路径未登记时只读一个原子位。
+#[cfg_attr(not(feature = "host-fronting"), allow(dead_code))]
+mod ech;
 mod http;
 mod intl;
 mod native_buffer;
@@ -63,6 +66,7 @@ pub use self::bridge::{
     register_bridge_route_async_handler, register_bridge_route_blocking_handler,
     register_bridge_route_sync_handler, unregister_bridge_route_handler,
 };
+pub use self::ech::{clear_ech_hosts, get_ech_hosts, set_ech_hosts};
 #[cfg(feature = "host-fronting")]
 pub use self::front_probe::probe_front_hosts;
 pub use self::fronting::{clear_front_hosts, get_front_hosts, set_front_hosts};
@@ -116,6 +120,8 @@ const WEB_POLYFILL_CORE: &str = concat!(
     "\n",
     include_str!("../js/30_fetch.js"),
     "\n",
+    include_str!("../js/35_fronting.js"),
+    "\n",
     include_str!("../js/60_native.js"),
     "\n",
     include_str!("../js/62_bridge.js"),
@@ -147,6 +153,8 @@ pub const WEB_POLYFILL: &str = concat!(
     include_str!("../js/20_abort.js"),
     "\n",
     include_str!("../js/30_fetch.js"),
+    "\n",
+    include_str!("../js/35_fronting.js"),
     "\n",
     include_str!("../js/60_native.js"),
     "\n",
@@ -225,6 +233,21 @@ fn clear_front_hosts_scoped(ctx: Ctx<'_>) -> String {
     clear_front_hosts(&runtime_scope(&ctx))
 }
 
+#[cfg(feature = "host-fronting")]
+fn set_ech_hosts_scoped(ctx: Ctx<'_>, payload: String) -> String {
+    set_ech_hosts(&runtime_scope(&ctx), payload)
+}
+
+#[cfg(feature = "host-fronting")]
+fn get_ech_hosts_scoped(ctx: Ctx<'_>) -> String {
+    get_ech_hosts(&runtime_scope(&ctx))
+}
+
+#[cfg(feature = "host-fronting")]
+fn clear_ech_hosts_scoped(ctx: Ctx<'_>) -> String {
+    clear_ech_hosts(&runtime_scope(&ctx))
+}
+
 pub fn install_host_bindings(
     ctx: &Ctx<'_>,
     runtime_name: &str,
@@ -252,8 +275,9 @@ pub fn install_host_bindings(
     globals.set("__http_request_cancel", Func::from(http_request_cancel))?;
     // 域名前置（IP 直连）能力：插件把 host -> IP 表下发给宿主，
     // 宿主据此把请求改写为「连 IP + 不发 SNI + Host + 强制 HTTP/1.1」。
-    // 通过 cargo feature `host-fronting` 控制；关闭时不注册这些全局函数，
-    // 插件探测到缺失即视为「宿主不支持」，与未打补丁的行为完全一致。
+    // 通过 cargo feature `host-fronting` 控制；关闭时不注册这些内部函数，
+    // 公开的 `fronting` 对象（js/35_fronting.js）统一返回 `fronting-unsupported`，
+    // 插件不需要做能力探测。
     // 前置表按 runtime（插件）隔离，作用域从 runtime userdata 读取。
     #[cfg(feature = "host-fronting")]
     globals.set("__http_set_front_hosts", Func::from(set_front_hosts_scoped))?;
@@ -269,6 +293,13 @@ pub fn install_host_bindings(
         "__http_probe_front_hosts",
         Function::new(ctx.clone(), probe_front_hosts)?,
     )?;
+    // ECH（Encrypted Client Hello）：URL 保持域名、SNI 加密，适合必须看 SNI 的站点。
+    #[cfg(feature = "host-fronting")]
+    globals.set("__http_set_ech_hosts", Func::from(set_ech_hosts_scoped))?;
+    #[cfg(feature = "host-fronting")]
+    globals.set("__http_get_ech_hosts", Func::from(get_ech_hosts_scoped))?;
+    #[cfg(feature = "host-fronting")]
+    globals.set("__http_clear_ech_hosts", Func::from(clear_ech_hosts_scoped))?;
     globals.set("__urlsp_rewrite", Func::from(urlsp_rewrite))?;
     globals.set("__urlsp_query", Func::from(urlsp_query))?;
     globals.set("__headers_rewrite", Func::from(headers_rewrite))?;

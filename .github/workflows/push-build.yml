@@ -101,6 +101,11 @@ jobs:
       - name: 设置 Android SDK
         uses: android-actions/setup-android@v4
 
+      # compileSdk 37（androidx.core 1.19 起的 AAR metadata 要求）对应的平台与
+      # build-tools 显式预装，避免 Gradle 构建时再临时下载
+      - name: 安装 Android SDK Platform 37
+        run: yes | sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
+
       - name: 设置 Dart SDK
         uses: dart-lang/setup-dart@v1
 

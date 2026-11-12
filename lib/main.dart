@@ -30,12 +30,13 @@ import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/i18n/system_locale_service.dart';
 import 'package:zephyr/network/http/wind_http.dart';
 import 'package:zephyr/util/network_policy.dart';
+import 'package:zephyr/util/process_exit.dart';
 import 'package:zephyr/util/proxy_setting.dart';
 import 'package:zephyr/network/sync/sync_device_id.dart';
 import 'package:zephyr/object_box/model.dart';
 import 'package:zephyr/object_box/object_box.dart';
 import 'package:zephyr/page/comic_follow/cubit/comic_follow_cubit.dart';
-import 'package:zephyr/platform/desktop/native_window.dart';
+import 'package:zephyr/platform/desktop/desktop_window.dart';
 import 'package:zephyr/platform/desktop/system_tray.dart';
 import 'package:zephyr/platform/desktop/window_logic.dart';
 import 'package:zephyr/platform/eink/eink_device.dart';
@@ -486,25 +487,24 @@ Future<void> addArchitectureTagsToSentry() async {
   }
 }
 
-class MyApp extends StatefulWidget with WindowListener {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp>
-    with WindowListener, WidgetsBindingObserver {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  /// 主窗口事件监听句柄，dispose 时注销。
+  ListenerId? _windowListenerId;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      windowManager.addListener(this);
-      _init();
-      WindowLogic.initWindow(context).then((_) {
-        windowManager.setPreventClose(true);
-      });
+      _attachWindowEvents();
+      WindowLogic.initWindow(context);
     }
     initSystemTray(
       onShowWindow: showMainWindow,
@@ -533,34 +533,53 @@ class _MyAppState extends State<MyApp>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      windowManager.removeListener(this);
+      final listenerId = _windowListenerId;
+      if (listenerId != null) {
+        mainWindow?.removeListener(listenerId);
+        _windowListenerId = null;
+      }
       disposeSystemTray();
     }
     super.dispose();
   }
 
-  @override
-  void onWindowResized() {
-    super.onWindowResized();
-    WindowLogic.saveWindowState(context);
+  /// 注册主窗口事件监听（窗口尚未创建时下一帧重试一次）。
+  void _attachWindowEvents() {
+    if (_windowListenerId != null) return;
+    final window = mainWindow;
+    if (window == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _windowListenerId != null) return;
+        final retryWindow = mainWindow;
+        if (retryWindow == null) {
+          logger.w('主窗口事件监听注册失败：窗口尚未就绪');
+          return;
+        }
+        _windowListenerId = retryWindow.addListener(_handleWindowEvent);
+      });
+      return;
+    }
+    _windowListenerId = window.addListener(_handleWindowEvent);
   }
 
-  @override
-  void onWindowMoved() {
-    super.onWindowMoved();
-    WindowLogic.saveWindowState(context);
-  }
-
-  @override
-  void onWindowMaximize() {
-    super.onWindowMaximize();
-    WindowLogic.saveWindowStateImmediately(context);
-  }
-
-  @override
-  void onWindowUnmaximize() {
-    super.onWindowUnmaximize();
-    WindowLogic.saveWindowStateImmediately(context);
+  void _handleWindowEvent(WindowEvent event) {
+    switch (event) {
+      case WindowResizedEvent():
+      case WindowMovedEvent():
+        WindowLogic.saveWindowState(context);
+      // 最大化/还原（含从最小化恢复）都会影响保存的尺寸，立即落盘。
+      case WindowMaximizedEvent():
+      case WindowRestoredEvent():
+        WindowLogic.saveWindowStateImmediately(context);
+      case WindowFocusedEvent():
+        if (mounted) setState(() {});
+      // 关闭请求一律先拦下，由 _handleCloseRequest 决定隐藏还是退出。
+      case WindowCloseRequestedEvent(:final request):
+        request.cancel();
+        _handleCloseRequest();
+      case _:
+        break;
+    }
   }
 
   /// 应用级退出请求不一定经过窗口关闭回调，退出前补存一次窗口状态。
@@ -575,13 +594,9 @@ class _MyAppState extends State<MyApp>
   /// 立即隐藏窗口再退出，让用户感知不到 Dart VM 清理的延迟
   Future<void> _forceExit() async {
     await WindowLogic.saveWindowStateImmediately(context);
-    // 强杀，降低延迟
-    // nuclearKillProcess();
-    if (Platform.isWindows) {
-      NativeWindow.hide(); // 同步 Win32 调用，零延迟
-    } else {
-      windowManager.hide(); // 其他桌面平台
-    }
+    // 先隐藏窗口（同步 FFI 调用，零延迟），再强杀进程，
+    // 让用户感知不到 Dart VM 回收的延迟。
+    mainWindow?.hide();
     objectbox.close();
     nuclearKillProcess();
   }
@@ -591,11 +606,6 @@ class _MyAppState extends State<MyApp>
   static const MethodChannel _linuxWindowChannel = MethodChannel(
     'breeze/linux/window',
   );
-
-  @override
-  void onWindowClose() {
-    _handleCloseRequest();
-  }
 
   Future<void> _handleCloseRequest() async {
     if (_handlingCloseRequest) return;
@@ -614,7 +624,7 @@ class _MyAppState extends State<MyApp>
       }
 
       if (Platform.isLinux) {
-        await windowManager.show();
+        mainWindow?.show();
       }
       final dialogContext = appRouter.navigatorKey.currentContext;
       if (dialogContext == null || !dialogContext.mounted) {
@@ -692,28 +702,11 @@ class _MyAppState extends State<MyApp>
   /// 隐藏窗口到任务栏托盘，不退出程序
   Future<void> _hideWindow() async {
     await WindowLogic.saveWindowStateImmediately(context);
-    if (Platform.isWindows) {
-      NativeWindow.hide();
-    } else {
-      windowManager.hide();
-    }
+    mainWindow?.hide();
   }
 
   Future<void> _performGracefulExit() async {
     await _forceExit();
-  }
-
-  @override
-  void onWindowFocus() {
-    super.onWindowFocus();
-    setState(() {});
-  }
-
-  void _init() async {
-    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      await windowManager.setPreventClose(true);
-      setState(() {});
-    }
   }
 
   @override
