@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zephyr/page/comic_read/method/zoomed_scroll_handoff.dart';
 import 'package:zephyr/page/comic_read/widgets/settings/reader_scroll_experiment_switch.dart';
@@ -121,15 +121,30 @@ void main() {
   ) async {
     zoomedContinuousScrollEnabled.value = false;
     addTearDown(() => zoomedContinuousScrollEnabled.value = false);
-    await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: ReaderScrollExperimentSwitch()),
-    ));
-    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, false);
-    await tester.tap(find.byType(SwitchListTile));
-    await tester.pumpAndSettle();
-    expect(zoomedContinuousScrollEnabled.value, true);
-    await tester.tap(find.byType(SwitchListTile));
-    await tester.pumpAndSettle();
-    expect(zoomedContinuousScrollEnabled.value, false);
+    // 与实际设置面板一样使用 material_ui 的 App、主题及 Material 祖先。
+    // 旧 flutter/material.dart 控件在这个环境中会缺少匹配的祖先/本地化。
+    for (final brightness in Brightness.values) {
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: brightness),
+        home: const Scaffold(
+          body: SingleChildScrollView(
+            child: Material(child: ReaderScrollExperimentSwitch()),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Continuous scrolling while zoomed (experimental)'),
+          findsOneWidget);
+      expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+          false);
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      expect(zoomedContinuousScrollEnabled.value, true);
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+      expect(zoomedContinuousScrollEnabled.value, false);
+      expect(tester.takeException(), isNull);
+    }
   });
 }
