@@ -8,6 +8,7 @@ import 'package:zephyr/cubit/comic_read_preference_cubit.dart';
 import 'package:zephyr/main.dart';
 import 'package:zephyr/page/comic_read/cubit/image_size_cubit.dart';
 import 'package:zephyr/page/comic_read/cubit/reader_cubit.dart';
+import 'package:zephyr/page/comic_read/method/image_header_size.dart';
 
 class ImageDisplay extends StatefulWidget {
   final String imagePath;
@@ -34,8 +35,8 @@ class _ImageDisplayState extends State<ImageDisplay> {
   ImageStreamListener? _imageListener;
   Timer? _einkDelayTimer;
 
-  double? _rawWidth;
-  double? _rawHeight;
+  /// 图片宽高比（height / width）。null 表示尚未解析出来。
+  double? _aspectRatio;
   bool _einkDelayFinished = true;
   bool _wasRowActive = false;
 
@@ -52,11 +53,9 @@ class _ImageDisplayState extends State<ImageDisplay> {
   void didUpdateWidget(covariant ImageDisplay oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (widget.isColumn != oldWidget.isColumn ||
-        widget.imagePath != oldWidget.imagePath) {
+    if (widget.imagePath != oldWidget.imagePath) {
       _stopListening();
-      _rawWidth = null;
-      _rawHeight = null;
+      _aspectRatio = null;
       _resolveImageMeta();
     }
 
@@ -94,7 +93,29 @@ class _ImageDisplayState extends State<ImageDisplay> {
     });
   }
 
+  /// 解析图片宽高比。
+  ///
+  /// 优先只读文件头拿宽高（不解码），只有文件头解析失败时才退回整图解码探测，
+  /// 避免为了拿一个宽高比把整张大图解码进 ImageCache。
   void _resolveImageMeta() {
+    unawaited(_resolveAspectRatioFromHeader());
+  }
+
+  Future<void> _resolveAspectRatioFromHeader() async {
+    final path = widget.imagePath;
+    final Size? headerSize = await readImageHeaderSize(path);
+    if (!mounted || path != widget.imagePath) return;
+
+    if (headerSize != null && headerSize.width > 0 && headerSize.height > 0) {
+      _aspectRatio = headerSize.height / headerSize.width;
+      _reportSizeToCubit();
+      return;
+    }
+
+    _resolveAspectRatioByDecoding();
+  }
+
+  void _resolveAspectRatioByDecoding() {
     final imageProvider = FileImage(File(widget.imagePath));
     final newStream = imageProvider.resolve(ImageConfiguration.empty);
 
@@ -102,15 +123,12 @@ class _ImageDisplayState extends State<ImageDisplay> {
       (ImageInfo imageInfo, bool synchronousCall) {
         if (!mounted) return;
 
-        _rawWidth = imageInfo.image.width.toDouble();
-        _rawHeight = imageInfo.image.height.toDouble();
+        final int width = imageInfo.image.width;
+        final int height = imageInfo.image.height;
+        if (width <= 0 || height <= 0) return;
 
-        if (context.mounted) {
-          final renderBox = context.findRenderObject() as RenderBox?;
-          if (renderBox != null && renderBox.hasSize) {
-            _updateCubitSize(renderBox.size.width);
-          }
-        }
+        _aspectRatio = height / width;
+        _reportSizeToCubit();
       },
       onError: (exception, stackTrace) {
         logger.e('Failed to resolve image size: $exception');
@@ -122,13 +140,31 @@ class _ImageDisplayState extends State<ImageDisplay> {
     newStream.addListener(newListener);
   }
 
+  void _reportSizeToCubit() {
+    if (!mounted) return;
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox != null && renderBox.hasSize) {
+      _updateCubitSize(renderBox.size.width);
+      return;
+    }
+    // 首次布局还没完成，等这一帧结束后再上报。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = context.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        _updateCubitSize(box.size.width);
+      }
+    });
+  }
+
   void _updateCubitSize(double actualWidth) {
-    if (_rawWidth == null || _rawHeight == null || _rawWidth == 0) return;
+    final ratio = _aspectRatio;
+    if (ratio == null || actualWidth <= 0) return;
 
     final index = widget.sizeCacheIndex;
     final cubit = context.read<ImageSizeCubit>();
 
-    final double finalHeight = (_rawHeight! / _rawWidth!) * actualWidth;
+    final double finalHeight = ratio * actualWidth;
 
     final currentCachedSize = cubit.getSize(index);
 
@@ -193,7 +229,7 @@ class _ImageDisplayState extends State<ImageDisplay> {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
 
-        if (_rawWidth != null) {
+        if (_aspectRatio != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _updateCubitSize(width);
           });
@@ -223,6 +259,10 @@ class _ImageDisplayState extends State<ImageDisplay> {
           child: Image.file(
             File(widget.imagePath),
             width: width,
+            // 按屏幕密度解码（useLogicalCacheSize 内部乘 devicePixelRatio），
+            // 避免超大扫描图整张解码进 ImageCache 挤占内存。
+            cacheWidth: width.isFinite && width >= 1 ? width.round() : null,
+            useLogicalCacheSize: true,
             fit: isColumn ? BoxFit.fill : BoxFit.contain,
             alignment: widget.imageAlignment,
             gaplessPlayback: true,
