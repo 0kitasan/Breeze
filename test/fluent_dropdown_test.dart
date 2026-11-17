@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:zephyr/widgets/fluent_dropdown.dart';
@@ -21,7 +22,6 @@ void main() {
                 displayValue: '第11期',
                 items: items,
                 onChanged: (_) {},
-                indicator: FluentDropdownIndicator.bar,
                 panelColor: const Color(0xFFF3F3F3),
                 selectedColor: const Color(0xFFE5E5E5),
                 hoverColor: const Color(0xFFEDEDED),
@@ -35,6 +35,9 @@ void main() {
 
       await tester.tap(find.text('第11期'));
       await tester.pumpAndSettle();
+
+      // 选中项只用左侧主色竖条标记，不再出现 Material 对勾。
+      expect(find.byIcon(Icons.check), findsNothing);
 
       // 多行标签也能准确滚到选中项：选中项顶部落在菜单可视区域内。
       final selectedFinder = find.text(items['v11']!);
@@ -97,4 +100,118 @@ void main() {
       expect(selectedFinder, findsNothing);
     },
   );
+
+  testWidgets('menu stays attached when the navigator is offset', (
+    tester,
+  ) async {
+    // 桌面端 MaterialApp.builder 在 Navigator 上方插了 40px 的自定义标题栏，
+    // 浮层坐标系因此整体下移；菜单必须按浮层坐标定位，不能直接用全局坐标。
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => Column(
+          children: [
+            const SizedBox(height: 40),
+            Expanded(child: child!),
+          ],
+        ),
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: FluentDropdown<String>(
+                value: 'a',
+                displayValue: 'A',
+                items: const {'a': 'A', 'b': 'B'},
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final triggerRect = tester.getRect(find.byType(FluentDropdown<String>));
+    await tester.tap(find.text('A'));
+    await tester.pumpAndSettle();
+
+    final menuRect = tester.getRect(find.byType(ListView));
+    expect(menuRect.top - triggerRect.bottom, closeTo(7, 1));
+  });
+
+  testWidgets('FluentPopupMenu.show returns the tapped value', (tester) async {
+    late BuildContext anchorContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) {
+              anchorContext = context;
+              return const SizedBox.expand();
+            },
+          ),
+        ),
+      ),
+    );
+
+    final future = FluentPopupMenu.show<String>(
+      context: anchorContext,
+      anchor: const Rect.fromLTWH(40, 40, 120, 40),
+      items: const [
+        FluentPopupMenuItem(value: 'a', title: Text('Rename')),
+        FluentPopupMenuItem(value: 'b', title: Text('Delete')),
+      ],
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Rename'), findsOneWidget);
+    // 菜单紧贴锚点矩形（anchor.bottom = 80，间距 6，面板边框 1）。
+    expect(tester.getRect(find.byType(ListView)).top, closeTo(87, 1));
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(await future, 'b');
+    expect(find.text('Rename'), findsNothing);
+  });
+
+  testWidgets('keyboard navigation moves and selects, escape closes', (
+    tester,
+  ) async {
+    String? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: FluentDropdown<String>(
+              value: 'a',
+              displayValue: 'A',
+              items: const {'a': 'A', 'b': 'B', 'c': 'C'},
+              onChanged: (value) => changed = value,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('A'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ListView), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(changed, 'b');
+    expect(find.byType(ListView), findsNothing);
+
+    // Esc 只关闭菜单，不触发选择。
+    changed = null;
+    await tester.tap(find.text('A'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byType(ListView), findsNothing);
+    expect(changed, isNull);
+  });
 }

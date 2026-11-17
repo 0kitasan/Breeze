@@ -21,7 +21,6 @@ class PluginChoiceDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final selected = field.findOptionByValue(selectedValue);
 
     return FluentDropdown<String>(
@@ -34,10 +33,6 @@ class PluginChoiceDropdown extends StatelessWidget {
         }
         onSelected(value);
       },
-      indicator: FluentDropdownIndicator.bar,
-      panelColor: colorScheme.surfaceContainerLow,
-      selectedColor: colorScheme.surfaceContainerHighest,
-      hoverColor: colorScheme.surfaceContainerHigh,
       panelBorderRadius: 12,
       itemBorderRadius: 8,
     );
