@@ -176,6 +176,51 @@ class ComicEditCubit extends Cubit<ComicEditState> {
     );
   }
 
+  Future<void> setChapterVolume(String chapterId, String groupTitle) async {
+    await _run(
+      () => _service.setChapterVolume(
+        from: from,
+        comicId: comicId,
+        chapterId: chapterId,
+        groupTitle: groupTitle,
+      ),
+      successMessage: t.comicEdit.volumeUpdated,
+    );
+  }
+
+  Future<void> importImagesToChapter(String chapterId, List<File> files) async {
+    if (files.isEmpty || chapterId.isEmpty) return;
+    await _run(
+      () => _service.importImagesToChapter(
+        from: from,
+        comicId: comicId,
+        chapterId: chapterId,
+        files: files,
+      ),
+      successMessage: t.comicEdit.imagesImported(count: files.length),
+      selectChapter: (_) => chapterId,
+    );
+  }
+
+  Future<void> importChaptersFromPath({
+    required String sourcePath,
+    required bool isDirectory,
+    String? cleanupRoot,
+    String uncategorizedName = '未分类',
+  }) async {
+    await _run(
+      () => _service.importChaptersFromPath(
+        from: from,
+        comicId: comicId,
+        sourcePath: sourcePath,
+        isDirectory: isDirectory,
+        cleanupRoot: cleanupRoot,
+        uncategorizedName: uncategorizedName,
+      ),
+      successMessage: t.comicEdit.chaptersImported,
+    );
+  }
+
   Future<void> reorderChapters(int oldIndex, int newIndex) async {
     final chapters = state.chapters;
     if (oldIndex < 0 || oldIndex >= chapters.length) return;

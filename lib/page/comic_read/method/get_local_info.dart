@@ -62,7 +62,9 @@ Future<NormalComicEpInfo> getPluginInfoFromLocal(
           originalName: image.name,
           path: image.path,
           fileServer: image.url,
-          id: image.id.isNotEmpty ? image.id : chapter.id,
+          id: image.id.isNotEmpty
+              ? image.id
+              : (image.path.isNotEmpty ? image.path : image.name),
           storageChapterId: chapter.effectiveStorageId,
           extern: Map<String, dynamic>.from(image.extern),
         ),

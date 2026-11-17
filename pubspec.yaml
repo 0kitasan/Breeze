@@ -111,6 +111,7 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  archive: ^4.6.0 # 测试: 构造 zip/tar 导入夹具
   flutter_lints: ^6.0.0 # 规范: 官方 Lint 规则
 
   # 代码生成

@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:zephyr/main.dart';
 import 'package:zephyr/object_box/model.dart';
 import 'package:zephyr/object_box/objectbox.g.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_import.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_scanner.dart';
 import 'package:zephyr/page/comic_edit/method/comic_edit_document.dart';
 import 'package:zephyr/page/comic_info/method/export_comic.dart'
     show detectImageExtension;
@@ -194,6 +197,166 @@ class ComicEditService {
     final doc = loadDocument(record).addChapter(id: id, name: value);
     _persist(record, doc);
     return doc;
+  }
+
+  Future<ComicEditDocument> setChapterVolume({
+    required String from,
+    required String comicId,
+    required String chapterId,
+    required String groupTitle,
+  }) async {
+    final record = _requireEditable(from, comicId);
+    final doc = loadDocument(record).setChapterVolume(chapterId, groupTitle);
+    _persist(record, doc);
+    return doc;
+  }
+
+  /// 把本地图片追加到指定章节。
+  Future<ComicEditDocument> importImagesToChapter({
+    required String from,
+    required String comicId,
+    required String chapterId,
+    required List<File> files,
+  }) async {
+    final record = _requireEditable(from, comicId);
+    var doc = loadDocument(record);
+    final chapter = _findChapter(doc.chapterMaps, chapterId);
+    if (chapter == null) {
+      throw StateError('chapter not found: $chapterId');
+    }
+    final storageId = comicEditChapterStorageId(chapter);
+    final usedPaths = <String>{
+      ...((chapter['images'] as List?) ?? const <dynamic>[])
+          .whereType<Map>()
+          .map((image) => image['path']?.toString() ?? '')
+          .where((path) => path.isNotEmpty),
+    };
+    final created = <String>[];
+    final images = <Map<String, dynamic>>[];
+    try {
+      for (final file in files) {
+        if (!await file.exists()) continue;
+        if (!LocalComicScanner.isImageFile(file.path)) continue;
+        final originalName = p.basename(file.path);
+        final storedName = uniqueLocalImageName(originalName, usedPaths);
+        final store = DownloadAssetStore(
+          from: from,
+          path: storedName,
+          cartoonId: comicId,
+          chapterId: '',
+          storageChapterId: storageId,
+          pictureType: PictureType.page,
+        );
+        final target = await store.canonicalDownloadPath();
+        await store.copyFileAtomically(
+          sourcePath: file.path,
+          finalPath: target,
+        );
+        created.add(target);
+        images.add(<String, dynamic>{
+          'id': 'local:${const Uuid().v4()}',
+          'name': originalName,
+          'path': storedName,
+          'url': '',
+          'extern': <String, dynamic>{'local': true},
+        });
+      }
+      if (images.isEmpty) return doc;
+      doc = doc.appendImages(chapterId, images);
+      _persist(record, doc);
+      return doc;
+    } catch (_) {
+      for (final path in created) {
+        await _deleteIfExists(File(path));
+      }
+      rethrow;
+    }
+  }
+
+  /// 从文件夹或压缩包向现有漫画追加章节。
+  Future<ComicEditDocument> importChaptersFromPath({
+    required String from,
+    required String comicId,
+    required String sourcePath,
+    required bool isDirectory,
+    String? cleanupRoot,
+    String uncategorizedName = '未分类',
+  }) async {
+    final record = _requireEditable(from, comicId);
+    // 选中的是卷目录时，卷名要成为章节的 groupTitle；选中的是整个漫画
+    // 目录（目录名与漫画标题一致）时不要多套一层同名分组。
+    final selectedName = isDirectory ? p.basename(sourcePath) : '';
+    final rootGroupTitle =
+        isDirectory &&
+            selectedName.toLowerCase() != record.title.trim().toLowerCase()
+        ? selectedName
+        : '';
+    final session = await prepareLocalComicScan(
+      sourcePath: sourcePath,
+      isDirectory: isDirectory,
+      cleanupRoot: cleanupRoot,
+      uncategorizedName: uncategorizedName,
+      rootGroupTitle: rootGroupTitle,
+    );
+    final created = <String>[];
+    try {
+      final newChapters = <Map<String, dynamic>>[];
+      for (final chapter in session.scan.chapters) {
+        final chapterId = 'local:${const Uuid().v4()}';
+        final storageId = chapterId;
+        final usedNames = <String>{};
+        final images = <Map<String, dynamic>>[];
+        for (final image in chapter.images) {
+          final originalName = p.basename(image.path);
+          final storedName = uniqueLocalImageName(originalName, usedNames);
+          final store = DownloadAssetStore(
+            from: from,
+            path: storedName,
+            cartoonId: comicId,
+            chapterId: '',
+            storageChapterId: storageId,
+            pictureType: PictureType.page,
+          );
+          final target = await store.canonicalDownloadPath();
+          await store.copyFileAtomically(
+            sourcePath: image.path,
+            finalPath: target,
+          );
+          created.add(target);
+          images.add(<String, dynamic>{
+            'id': 'local:${const Uuid().v4()}',
+            'name': originalName,
+            'path': storedName,
+            'url': '',
+            'extern': <String, dynamic>{'local': true},
+          });
+        }
+        newChapters.add(<String, dynamic>{
+          'id': chapterId,
+          'name': chapter.name,
+          'order': 0,
+          'logicalKey': chapterId,
+          'taskChapterId': '',
+          'storageChapterId': storageId,
+          'groupTitle': chapter.groupTitle,
+          'images': images,
+        });
+      }
+
+      if (newChapters.isEmpty) {
+        throw StateError('no comic images found');
+      }
+      final doc = loadDocument(record).addChapters(newChapters);
+      _persist(record, doc);
+      return doc;
+    } catch (_) {
+      for (final path in created) {
+        await _deleteIfExists(File(path));
+      }
+      rethrow;
+    } finally {
+      await session.dispose();
+    }
   }
 
   Future<ComicEditDocument> reorderChapters({

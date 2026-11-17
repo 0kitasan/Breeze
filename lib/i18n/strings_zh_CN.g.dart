@@ -1166,6 +1166,30 @@ class Translations$bookshelf$zh_CN {
 	/// zh-CN: '导入漫画'
 	String get importComic => '导入漫画';
 
+	/// zh-CN: '导入外部漫画'
+	String get importExternalComic => '导入外部漫画';
+
+	/// zh-CN: '开始导入外部漫画'
+	String get importExternalStarted => '开始导入外部漫画';
+
+	/// zh-CN: '选择文件夹'
+	String get importExternalFolder => '选择文件夹';
+
+	/// zh-CN: '扫描文件夹中的图片与压缩包'
+	String get importExternalFolderHint => '扫描文件夹中的图片与压缩包';
+
+	/// zh-CN: '选择压缩包'
+	String get importExternalArchive => '选择压缩包';
+
+	/// zh-CN: '支持 CBZ / CBR / CB7 / CBT'
+	String get importExternalArchiveHint => '支持 CBZ / CBR / CB7 / CBT';
+
+	/// zh-CN: '导入完成：$title（$chapters 章 / $images 张图）'
+	String importExternalCompleted({required Object title, required Object chapters, required Object images}) => '导入完成：${title}（${chapters} 章 / ${images} 张图）';
+
+	/// zh-CN: '未分类'
+	String get importUncategorized => '未分类';
+
 	/// zh-CN: '书架说明'
 	String get folderHint => '书架说明';
 
@@ -1519,6 +1543,30 @@ class Translations$comicEdit$zh_CN {
 
 	/// zh-CN: '章节已重命名'
 	String get chapterRenamed => '章节已重命名';
+
+	/// zh-CN: '导入章节'
+	String get importChapters => '导入章节';
+
+	/// zh-CN: '导入图片'
+	String get importImages => '导入图片';
+
+	/// zh-CN: '章节已导入'
+	String get chaptersImported => '章节已导入';
+
+	/// zh-CN: '已导入 $count 张图片'
+	String imagesImported({required Object count}) => '已导入 ${count} 张图片';
+
+	/// zh-CN: '编辑分卷'
+	String get editVolume => '编辑分卷';
+
+	/// zh-CN: '输入分卷名称，留空表示不分组'
+	String get volumeHint => '输入分卷名称，留空表示不分组';
+
+	/// zh-CN: '分卷：$name'
+	String volumeLabel({required Object name}) => '分卷：${name}';
+
+	/// zh-CN: '分卷已更新'
+	String get volumeUpdated => '分卷已更新';
 
 	/// zh-CN: '图片文件缺失'
 	String get imageMissing => '图片文件缺失';
@@ -4660,6 +4708,14 @@ extension on Translations {
 			'bookshelf.newFolder' => '新建文件夹',
 			'bookshelf.manage' => '管理',
 			'bookshelf.importComic' => '导入漫画',
+			'bookshelf.importExternalComic' => '导入外部漫画',
+			'bookshelf.importExternalStarted' => '开始导入外部漫画',
+			'bookshelf.importExternalFolder' => '选择文件夹',
+			'bookshelf.importExternalFolderHint' => '扫描文件夹中的图片与压缩包',
+			'bookshelf.importExternalArchive' => '选择压缩包',
+			'bookshelf.importExternalArchiveHint' => '支持 CBZ / CBR / CB7 / CBT',
+			'bookshelf.importExternalCompleted' => ({required Object title, required Object chapters, required Object images}) => '导入完成：${title}（${chapters} 章 / ${images} 张图）',
+			'bookshelf.importUncategorized' => '未分类',
 			'bookshelf.folderHint' => '书架说明',
 			'bookshelf.removeFromFolder' => '移出文件夹',
 			'bookshelf.deleteFavorite' => '删除收藏',
@@ -4775,6 +4831,14 @@ extension on Translations {
 			'comicEdit.coverUpdated' => '封面已更新',
 			'comicEdit.chapterAdded' => '章节已新增',
 			'comicEdit.chapterRenamed' => '章节已重命名',
+			'comicEdit.importChapters' => '导入章节',
+			'comicEdit.importImages' => '导入图片',
+			'comicEdit.chaptersImported' => '章节已导入',
+			'comicEdit.imagesImported' => ({required Object count}) => '已导入 ${count} 张图片',
+			'comicEdit.editVolume' => '编辑分卷',
+			'comicEdit.volumeHint' => '输入分卷名称，留空表示不分组',
+			'comicEdit.volumeLabel' => ({required Object name}) => '分卷：${name}',
+			'comicEdit.volumeUpdated' => '分卷已更新',
 			'comicEdit.imageMissing' => '图片文件缺失',
 			'comicEdit.busy' => '处理中...',
 			'comicEdit.notFound' => '下载记录不存在',
@@ -4812,6 +4876,8 @@ extension on Translations {
 			'comicInfo.exportSuccess' => '导出成功',
 			'comicInfo.detailsNotLoaded' => '当前详情尚未加载完成',
 			'comicInfo.followed' => '已加入追更',
+			_ => null,
+		} ?? switch (path) {
 			'comicInfo.unfollowed' => '已取消追更',
 			'comicInfo.confirmUnfollowTitle' => '取消追更',
 			'comicInfo.confirmUnfollowContent' => ({required Object title}) => '确定不再追更《${title}》吗？',
@@ -4828,8 +4894,6 @@ extension on Translations {
 			'comicInfo.tags' => '标签',
 			'comicInfo.works' => '作品',
 			'comicInfo.views' => ({required Object count}) => '浏览：${count}',
-			_ => null,
-		} ?? switch (path) {
 			'comicInfo.updateTime' => ({required Object time}) => '更新时间：${time}',
 			'comicInfo.startRead' => '开始阅读',
 			'comicInfo.continueRead' => '继续阅读',
@@ -5326,6 +5390,8 @@ extension on Translations {
 			'about.disclaimerItem6Content' => '开发者保留随时修改、暂停或终止本项目的权利，且无需提前通知用户。开发者不对因项目修改、暂停或终止而导致的任何后果负责。',
 			'about.disclaimerItem7Title' => '7. 贡献者责任',
 			'about.disclaimerItem7Content' => '如果本项目接受外部贡献，贡献者的行为仅代表其个人立场，不代表开发者的观点或立场。开发者对贡献者的行为及其贡献内容不承担责任。',
+			_ => null,
+		} ?? switch (path) {
 			'about.disclaimerItem8Title' => '8. 法律合规性',
 			'about.disclaimerItem8Content' => '用户在使用本项目时，应确保其行为符合所在国家或地区的法律法规。开发者不对用户因违反法律法规而导致的任何后果负责。',
 			'about.disclaimerImportant' => '重要提示',
@@ -5342,8 +5408,6 @@ extension on Translations {
 			'oldHome.recommend' => '推荐',
 			'oldHome.latest' => '最新',
 			'oldHome.cloudFavorite' => '云收藏',
-			_ => null,
-		} ?? switch (path) {
 			'oldHome.list' => '列表',
 			'oldHome.function' => '功能',
 			'oldHome.close' => '关闭',

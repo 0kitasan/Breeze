@@ -3206,6 +3206,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
+name = "rars"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f10c4922c8ceb429e2eed0b2f61672f673d53a42fdfeb07fd0e143777ee9a979"
+dependencies = [
+ "aho-corasick",
+ "crc32fast",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4126,6 +4136,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tar"
+version = "0.4.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
+dependencies = [
+ "filetime",
+ "libc",
+ "xattr",
+]
+
+[[package]]
 name = "tempfile"
 version = "3.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4944,6 +4965,7 @@ dependencies = [
  "log",
  "md5",
  "oslog",
+ "rars",
  "reqwest",
  "reqwest-middleware",
  "reqwest_dav",
@@ -4955,6 +4977,7 @@ dependencies = [
  "serde_json",
  "sevenz-rust",
  "sys-locale",
+ "tar",
  "terminal_size",
  "tokio",
  "tokio-tar",

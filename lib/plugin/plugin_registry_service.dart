@@ -8,6 +8,7 @@ import 'package:zephyr/object_box/model.dart';
 import 'package:zephyr/object_box/object_box.dart';
 import 'package:zephyr/object_box/objectbox.g.dart';
 import 'package:zephyr/page/bookshelf/service/comic_link_service.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 import 'package:zephyr/plugin/models/plugin_runtime_state.dart';
 import 'package:zephyr/src/rust/api/qjs.dart';
 import 'package:zephyr/src/rust/qjs.dart';
@@ -120,6 +121,11 @@ class PluginRegistryService {
     _states
       ..clear()
       ..addEntries(list.map((item) => MapEntry(item.uuid, _toState(item))));
+    final local = _states[kLocalComicPluginId];
+    if (local != null && !local.isDeleted) {
+      _pluginInfoCache[kLocalComicPluginId] = localComicPluginInfo();
+      _infoStreamController.add(infoSnapshot);
+    }
     _emit();
   }
 
@@ -153,6 +159,7 @@ class PluginRegistryService {
     );
 
     for (final uuid in affected) {
+      if (isLocalComicPluginId(uuid)) continue;
       _dropInfoCache(uuid);
       _pluginInitDone.remove(uuid);
       _clearInitOk(uuid);
@@ -169,6 +176,7 @@ class PluginRegistryService {
     }
 
     for (final uuid in affected) {
+      if (isLocalComicPluginId(uuid)) continue;
       final plugin = current[uuid];
       if (plugin == null || !plugin.isActive) {
         continue;
@@ -256,6 +264,17 @@ class PluginRegistryService {
       throw StateError('插件不可用: $uuid');
     }
 
+    if (isLocalComicPluginId(uuid)) {
+      final info = localComicPluginInfo();
+      _pluginInfoCache[uuid] = info;
+      _infoStreamController.add(infoSnapshot);
+      if (_infoErrorCache.remove(uuid) != null) {
+        _infoErrorStreamController.add(infoErrorSnapshot);
+      }
+      await updateLoadResult(uuid, success: true, error: null);
+      return info;
+    }
+
     final onceRuntimeName = 'plugin_info_${uuid.replaceAll('-', '_')}';
     Map<String, dynamic> decoded;
     try {
@@ -321,7 +340,9 @@ class PluginRegistryService {
   }
 
   List<PluginRuntimeState> activePlugins() {
-    return _states.values.where((item) => item.isActive).toList()
+    return _states.values
+        .where((item) => item.isActive && !isLocalComicPluginId(item.uuid))
+        .toList()
       ..sort((a, b) => a.insertedAt.compareTo(b.insertedAt));
   }
 
@@ -334,7 +355,11 @@ class PluginRegistryService {
 
   List<PluginRuntimeState> orderedPlugins({bool includeDeleted = false}) {
     return sortPlugins(
-      _states.values.where((plugin) => includeDeleted || !plugin.isDeleted),
+      _states.values.where(
+        (plugin) =>
+            !isLocalComicPluginId(plugin.uuid) &&
+            (includeDeleted || !plugin.isDeleted),
+      ),
     );
   }
 
@@ -423,17 +448,26 @@ class PluginRegistryService {
 
   List<String> getEnabledUuids() {
     return _states.values
-        .where((item) => item.isEnabled && !item.isDeleted)
+        .where(
+          (item) =>
+              item.isEnabled &&
+              !item.isDeleted &&
+              !isLocalComicPluginId(item.uuid),
+        )
         .map((item) => item.uuid)
         .toList();
   }
 
   int getActivePluginCount() {
-    return _states.values.where((item) => item.isActive).length;
+    return _states.values
+        .where((item) => item.isActive && !isLocalComicPluginId(item.uuid))
+        .length;
   }
 
   bool isAnyPluginEnabled() {
-    return _states.values.any((item) => item.isActive);
+    return _states.values.any(
+      (item) => item.isActive && !isLocalComicPluginId(item.uuid),
+    );
   }
 
   List<PluginRuntimeState> getSortedActivePlugins() {
@@ -556,6 +590,9 @@ class PluginRegistryService {
   }
 
   Future<void> deletePlugin(String uuid) async {
+    if (isLocalComicPluginId(uuid)) {
+      return;
+    }
     final objectbox = _objectbox;
     if (objectbox == null) {
       return;

@@ -6,6 +6,7 @@ import 'package:zephyr/page/search/cubit/search_cubit.dart';
 import 'package:zephyr/page/search_result/bloc/search_bloc.dart';
 import 'package:zephyr/config/router/router.gr.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 
 void onSearch(
   BuildContext context,
@@ -36,7 +37,10 @@ void onSearch(
     final availableSources = PluginRegistryService.I
         .sortPlugins(
           registry.plugins.values.where(
-            (plugin) => plugin.isEnabled && !plugin.isDeleted,
+            (plugin) =>
+                plugin.isEnabled &&
+                !plugin.isDeleted &&
+                !isLocalComicPluginId(plugin.uuid),
           ),
         )
         .map((plugin) => plugin.uuid)

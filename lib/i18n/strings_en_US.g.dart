@@ -475,6 +475,14 @@ class _Translations$bookshelf$en_US extends Translations$bookshelf$zh_CN {
 	@override String get newFolder => 'New folder';
 	@override String get manage => 'Manage';
 	@override String get importComic => 'Import comic';
+	@override String get importExternalComic => 'Import external comic';
+	@override String get importExternalStarted => 'Importing external comic';
+	@override String get importExternalFolder => 'Choose folder';
+	@override String get importExternalFolderHint => 'Scan images and archives in a folder';
+	@override String get importExternalArchive => 'Choose archive';
+	@override String get importExternalArchiveHint => 'Supports CBZ / CBR / CB7 / CBT';
+	@override String importExternalCompleted({required Object title, required Object chapters, required Object images}) => 'Imported: ${title} (${chapters} chapters / ${images} pages)';
+	@override String get importUncategorized => 'Uncategorized';
 	@override String get folderHint => 'Bookshelf hints';
 	@override String get removeFromFolder => 'Remove from folder';
 	@override String get deleteFavorite => 'Remove favorite';
@@ -598,6 +606,14 @@ class _Translations$comicEdit$en_US extends Translations$comicEdit$zh_CN {
 	@override String get coverUpdated => 'Cover updated';
 	@override String get chapterAdded => 'Chapter added';
 	@override String get chapterRenamed => 'Chapter renamed';
+	@override String get importChapters => 'Import chapters';
+	@override String get importImages => 'Import pages';
+	@override String get chaptersImported => 'Chapters imported';
+	@override String imagesImported({required Object count}) => 'Imported ${count} pages';
+	@override String get editVolume => 'Edit volume';
+	@override String get volumeHint => 'Enter a volume name; leave empty for no grouping';
+	@override String volumeLabel({required Object name}) => 'Volume: ${name}';
+	@override String get volumeUpdated => 'Volume updated';
 	@override String get imageMissing => 'Image file missing';
 	@override String get busy => 'Working...';
 	@override String get notFound => 'Download record not found';
@@ -2061,6 +2077,14 @@ extension on TranslationsEnUs {
 			'bookshelf.newFolder' => 'New folder',
 			'bookshelf.manage' => 'Manage',
 			'bookshelf.importComic' => 'Import comic',
+			'bookshelf.importExternalComic' => 'Import external comic',
+			'bookshelf.importExternalStarted' => 'Importing external comic',
+			'bookshelf.importExternalFolder' => 'Choose folder',
+			'bookshelf.importExternalFolderHint' => 'Scan images and archives in a folder',
+			'bookshelf.importExternalArchive' => 'Choose archive',
+			'bookshelf.importExternalArchiveHint' => 'Supports CBZ / CBR / CB7 / CBT',
+			'bookshelf.importExternalCompleted' => ({required Object title, required Object chapters, required Object images}) => 'Imported: ${title} (${chapters} chapters / ${images} pages)',
+			'bookshelf.importUncategorized' => 'Uncategorized',
 			'bookshelf.folderHint' => 'Bookshelf hints',
 			'bookshelf.removeFromFolder' => 'Remove from folder',
 			'bookshelf.deleteFavorite' => 'Remove favorite',
@@ -2175,6 +2199,14 @@ extension on TranslationsEnUs {
 			'comicEdit.coverUpdated' => 'Cover updated',
 			'comicEdit.chapterAdded' => 'Chapter added',
 			'comicEdit.chapterRenamed' => 'Chapter renamed',
+			'comicEdit.importChapters' => 'Import chapters',
+			'comicEdit.importImages' => 'Import pages',
+			'comicEdit.chaptersImported' => 'Chapters imported',
+			'comicEdit.imagesImported' => ({required Object count}) => 'Imported ${count} pages',
+			'comicEdit.editVolume' => 'Edit volume',
+			'comicEdit.volumeHint' => 'Enter a volume name; leave empty for no grouping',
+			'comicEdit.volumeLabel' => ({required Object name}) => 'Volume: ${name}',
+			'comicEdit.volumeUpdated' => 'Volume updated',
 			'comicEdit.imageMissing' => 'Image file missing',
 			'comicEdit.busy' => 'Working...',
 			'comicEdit.notFound' => 'Download record not found',
@@ -2212,6 +2244,8 @@ extension on TranslationsEnUs {
 			'comicInfo.exportSuccess' => 'Export successful',
 			'comicInfo.detailsNotLoaded' => 'Comic details not fully loaded',
 			'comicInfo.followed' => 'Following updates',
+			_ => null,
+		} ?? switch (path) {
 			'comicInfo.unfollowed' => 'Unfollowed',
 			'comicInfo.confirmUnfollowTitle' => 'Unfollow',
 			'comicInfo.confirmUnfollowContent' => ({required Object title}) => 'Stop following "${title}"?',
@@ -2228,8 +2262,6 @@ extension on TranslationsEnUs {
 			'comicInfo.tags' => 'Tags',
 			'comicInfo.works' => 'Works',
 			'comicInfo.views' => ({required Object count}) => 'Views: ${count}',
-			_ => null,
-		} ?? switch (path) {
 			'comicInfo.updateTime' => ({required Object time}) => 'Updated: ${time}',
 			'comicInfo.startRead' => 'Start reading',
 			'comicInfo.continueRead' => 'Continue reading',
@@ -2726,6 +2758,8 @@ extension on TranslationsEnUs {
 			'about.disclaimerItem7Title' => '7. Contributor Responsibility',
 			'about.disclaimerItem7Content' => 'If external contributions are accepted, contributors act in their personal capacity and do not represent the developer\'s views or positions. The developer is not responsible for contributor actions or content.',
 			'about.disclaimerItem8Title' => '8. Legal Compliance',
+			_ => null,
+		} ?? switch (path) {
 			'about.disclaimerItem8Content' => 'Users must ensure their use complies with applicable laws and regulations. The developer is not responsible for consequences resulting from legal violations.',
 			'about.disclaimerImportant' => 'Important Notice',
 			'about.disclaimerImportantContent' => 'Please read and understand this disclaimer before using this project. If you do not agree with any term, stop using it immediately. Continued use constitutes acceptance of the entire disclaimer.',
@@ -2742,8 +2776,6 @@ extension on TranslationsEnUs {
 			'oldHome.latest' => 'Latest',
 			'oldHome.cloudFavorite' => 'Cloud Favorites',
 			'oldHome.list' => 'List',
-			_ => null,
-		} ?? switch (path) {
 			'oldHome.function' => 'Function',
 			'oldHome.close' => 'Close',
 			'oldHome.loadFailedRetry' => 'Load failed, please retry.',

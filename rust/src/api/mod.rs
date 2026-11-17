@@ -1,3 +1,4 @@
+pub mod comic_archive;
 pub mod data_backup;
 pub mod http;
 pub mod image;

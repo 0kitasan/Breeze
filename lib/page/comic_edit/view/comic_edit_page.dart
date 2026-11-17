@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_reorderable_grid_view/widgets/widgets.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +10,7 @@ import 'package:pool/pool.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/network/http/picture/picture.dart';
 import 'package:zephyr/page/comic_edit/cubit/comic_edit_cubit.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_picker.dart';
 import 'package:zephyr/page/comic_edit/method/comic_edit_debug.dart';
 import 'package:zephyr/page/comic_edit/method/comic_edit_document.dart';
 import 'package:zephyr/service/download/download_asset_store.dart';
@@ -318,15 +320,40 @@ class _TitleEditorState extends State<_TitleEditor> {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<ComicEditCubit>();
-    final field = TextField(
-      controller: _controller,
-      decoration: InputDecoration(
-        labelText: t.comicEdit.comicTitle,
-        hintText: t.comicEdit.titleHint,
-        border: const OutlineInputBorder(),
-      ),
-      textInputAction: TextInputAction.done,
-      onSubmitted: cubit.saveTitle,
+    final field = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          t.comicEdit.comicTitle,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: TextField(
+            controller: _controller,
+            minLines: 1,
+            maxLines: 6,
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.done,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.singleLineFormatter,
+            ],
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              hintText: t.comicEdit.titleHint,
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            onSubmitted: cubit.saveTitle,
+          ),
+        ),
+      ],
     );
     final button = FilledButton.icon(
       onPressed: widget.state.busy
@@ -416,30 +443,61 @@ class _ChaptersTab extends StatelessWidget {
     final cubit = context.read<ComicEditCubit>();
     final chapters = state.chapters;
     return Scaffold(
-      body: chapters.isEmpty
-          ? Center(child: Text(t.comicEdit.noChapters))
-          : ReorderableListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
-              itemCount: chapters.length,
-              buildDefaultDragHandles: false,
-              onReorderItem: (oldIndex, newIndex) =>
-                  cubit.reorderChapters(oldIndex, newIndex),
-              itemBuilder: (context, index) {
-                final chapter = chapters[index];
-                final id = comicEditChapterId(chapter);
-                return _ChapterTile(
-                  key: ValueKey(id),
-                  chapter: chapter,
-                  index: index,
-                  selected: id == state.selectedChapterId,
-                  onTap: () {
-                    cubit.selectChapter(id);
-                    DefaultTabController.of(context).animateTo(2);
-                  },
-                  onRename: () => _renameChapter(context, cubit, chapter),
-                );
-              },
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton.icon(
+                  onPressed: state.busy
+                      ? null
+                      : () => _importChapters(context, cubit),
+                  icon: const Icon(Icons.playlist_add),
+                  label: Text(t.comicEdit.importChapters),
+                ),
+                TextButton.icon(
+                  onPressed: state.busy
+                      ? null
+                      : () => _importImages(context, cubit, state),
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  label: Text(t.comicEdit.importImages),
+                ),
+              ],
             ),
+          ),
+          Expanded(
+            child: chapters.isEmpty
+                ? Center(child: Text(t.comicEdit.noChapters))
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
+                    itemCount: chapters.length,
+                    buildDefaultDragHandles: false,
+                    onReorderItem: (oldIndex, newIndex) =>
+                        cubit.reorderChapters(oldIndex, newIndex),
+                    itemBuilder: (context, index) {
+                      final chapter = chapters[index];
+                      final id = comicEditChapterId(chapter);
+                      return _ChapterTile(
+                        key: ValueKey(id),
+                        chapter: chapter,
+                        index: index,
+                        selected: id == state.selectedChapterId,
+                        onTap: () {
+                          cubit.selectChapter(id);
+                          DefaultTabController.of(context).animateTo(2);
+                        },
+                        onRename: () => _renameChapter(context, cubit, chapter),
+                        onEditVolume: () =>
+                            _editChapterVolume(context, cubit, chapter),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addChapter(
           context,
@@ -480,6 +538,20 @@ class _ChapterListPane extends StatelessWidget {
                 ),
               ),
               IconButton(
+                tooltip: t.comicEdit.importChapters,
+                icon: const Icon(Icons.playlist_add),
+                onPressed: state.busy
+                    ? null
+                    : () => _importChapters(context, cubit),
+              ),
+              IconButton(
+                tooltip: t.comicEdit.importImages,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                onPressed: state.busy
+                    ? null
+                    : () => _importImages(context, cubit, state),
+              ),
+              IconButton(
                 tooltip: t.comicEdit.addChapter,
                 icon: const Icon(Icons.add),
                 onPressed: () => _addChapter(context, cubit),
@@ -507,6 +579,8 @@ class _ChapterListPane extends StatelessWidget {
                       selected: id == state.selectedChapterId,
                       onTap: () => cubit.selectChapter(id),
                       onRename: () => _renameChapter(context, cubit, chapter),
+                      onEditVolume: () =>
+                          _editChapterVolume(context, cubit, chapter),
                     );
                   },
                 ),
@@ -524,6 +598,7 @@ class _ChapterTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.onRename,
+    required this.onEditVolume,
   });
 
   final Map<String, dynamic> chapter;
@@ -531,11 +606,17 @@ class _ChapterTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onRename;
+  final VoidCallback onEditVolume;
 
   @override
   Widget build(BuildContext context) {
     final name = chapter['name']?.toString() ?? '';
+    final volume = chapter['groupTitle']?.toString().trim() ?? '';
     final count = ((chapter['images'] as List?) ?? const []).length;
+    final subtitle = volume.isEmpty
+        ? t.comicEdit.pagesCount(count: count)
+        : '${t.comicEdit.volumeLabel(name: volume)} · '
+              '${t.comicEdit.pagesCount(count: count)}';
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -543,14 +624,21 @@ class _ChapterTile extends StatelessWidget {
           selected: selected,
           leading: CircleAvatar(child: Text('${index + 1}')),
           title: Text(name.isEmpty ? t.comicEdit.chapterName : name),
-          subtitle: Text(t.comicEdit.pagesCount(count: count)),
+          subtitle: Text(subtitle),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
+                visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: t.comicEdit.renameChapter,
                 onPressed: onRename,
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.book_outlined),
+                tooltip: t.comicEdit.editVolume,
+                onPressed: onEditVolume,
               ),
               ReorderableDragStartListener(
                 index: index,
@@ -1354,6 +1442,149 @@ Future<void> _pickCover(ComicEditCubit cubit) async {
   final file = await openFile(acceptedTypeGroups: [typeGroup]);
   if (file == null) return;
   await cubit.saveCover(File(file.path));
+}
+
+Future<void> _importChapters(BuildContext context, ComicEditCubit cubit) async {
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: Text(t.bookshelf.importExternalFolder),
+              subtitle: Text(t.bookshelf.importExternalFolderHint),
+              onTap: () => Navigator.of(sheetContext).pop('folder'),
+            ),
+          ListTile(
+            leading: const Icon(Icons.archive_outlined),
+            title: Text(t.bookshelf.importExternalArchive),
+            subtitle: Text(t.bookshelf.importExternalArchiveHint),
+            onTap: () => Navigator.of(sheetContext).pop('archive'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null) return;
+
+  try {
+    final picked = choice == 'folder'
+        ? await pickLocalComicDirectory()
+        : await pickLocalComicArchive();
+    if (picked == null) return;
+    await cubit.importChaptersFromPath(
+      sourcePath: picked.path,
+      isDirectory: picked.isDirectory,
+      cleanupRoot: picked.cleanupRoot,
+      uncategorizedName: t.bookshelf.importUncategorized,
+    );
+  } catch (e) {
+    showErrorToast(t.error.importFailed(error: e.toString()));
+  }
+}
+
+Future<void> _importImages(
+  BuildContext context,
+  ComicEditCubit cubit,
+  ComicEditState state,
+) async {
+  if (state.chapters.isEmpty) {
+    showErrorToast(t.comicEdit.noChapters);
+    return;
+  }
+  final chapterId = await _pickChapterForImport(context, state);
+  if (chapterId == null) return;
+
+  const typeGroup = XTypeGroup(
+    label: 'images',
+    extensions: <String>['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'],
+  );
+  final files = await openFiles(acceptedTypeGroups: const [typeGroup]);
+  if (files.isEmpty) return;
+  await cubit.importImagesToChapter(
+    chapterId,
+    files.map((file) => File(file.path)).toList(),
+  );
+}
+
+/// 导入图片前先选目标章节，默认当前章节。
+Future<String?> _pickChapterForImport(
+  BuildContext context,
+  ComicEditState state,
+) async {
+  final chapters = state.chapters;
+  if (chapters.isEmpty) return null;
+  final currentId = state.selectedChapterId.isNotEmpty
+      ? state.selectedChapterId
+      : comicEditChapterId(chapters.first);
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(t.comicEdit.selectChapter),
+      content: SizedBox(
+        width: 380,
+        height: 420,
+        child: ListView(
+          children: [
+            for (final entry in chapters.asMap().entries)
+              _chapterImportTile(
+                context: dialogContext,
+                chapter: entry.value,
+                index: entry.key,
+                currentId: currentId,
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(t.common.cancel),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _chapterImportTile({
+  required BuildContext context,
+  required Map<String, dynamic> chapter,
+  required int index,
+  required String currentId,
+}) {
+  final id = comicEditChapterId(chapter);
+  final count = ((chapter['images'] as List?) ?? const []).length;
+  return ListTile(
+    selected: id == currentId,
+    leading: CircleAvatar(child: Text('${index + 1}')),
+    title: Text(_chapterDisplayName(chapter)),
+    subtitle: Text(t.comicEdit.pagesCount(count: count)),
+    trailing: id == currentId ? const Icon(Icons.check) : null,
+    onTap: () => Navigator.of(context).pop(id),
+  );
+}
+
+String _chapterDisplayName(Map<String, dynamic> chapter) {
+  final name = chapter['name']?.toString() ?? '';
+  return name.isEmpty ? t.comicEdit.chapterName : name;
+}
+
+Future<void> _editChapterVolume(
+  BuildContext context,
+  ComicEditCubit cubit,
+  Map<String, dynamic> chapter,
+) async {
+  final value = await _showNameDialog(
+    context,
+    title: t.comicEdit.editVolume,
+    hint: t.comicEdit.volumeHint,
+    initial: chapter['groupTitle']?.toString() ?? '',
+  );
+  if (value == null) return;
+  await cubit.setChapterVolume(comicEditChapterId(chapter), value);
 }
 
 Future<void> _renameChapter(

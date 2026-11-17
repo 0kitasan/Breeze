@@ -35,6 +35,16 @@ Map<String, dynamic> _detail() => <String, dynamic>{
       'groupTitle': '',
       'extern': <String, dynamic>{},
     },
+    <String, dynamic>{
+      'id': 'ch2',
+      'name': '第2话',
+      'order': 2,
+      'requestId': 'r2',
+      'storageChapterId': 's2',
+      'logicalKey': 'ch2',
+      'groupTitle': '',
+      'extern': <String, dynamic>{},
+    },
   ],
   'extern': <String, dynamic>{},
 };
@@ -53,6 +63,24 @@ List<Map<String, dynamic>> _chapters() => <Map<String, dynamic>>[
         'id': 'i1',
         'name': '1.png',
         'path': 'p1',
+        'url': '',
+        'extern': <String, dynamic>{},
+      },
+    ],
+  },
+  <String, dynamic>{
+    'id': 's2',
+    'name': '第2话',
+    'order': 2,
+    'logicalKey': 'ch2',
+    'taskChapterId': 'r2',
+    'storageChapterId': 's2',
+    'groupTitle': '',
+    'images': <Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'i2',
+        'name': '2.png',
+        'path': 'p2',
         'url': '',
         'extern': <String, dynamic>{},
       },
@@ -116,10 +144,16 @@ void main() {
     expect(find.text('章节'), findsOneWidget);
     expect(find.text('图片'), findsOneWidget);
     expect(find.text('Original'), findsOneWidget);
+    final titleField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(titleField.maxLines, 6);
+    expect(titleField.keyboardType, TextInputType.text);
 
     await tester.tap(find.text('章节'));
     await tester.pumpAndSettle();
     expect(find.text('第1话'), findsWidgets);
+    expect(find.text('导入章节'), findsOneWidget);
+    expect(find.text('导入图片'), findsOneWidget);
+    expect(find.byIcon(Icons.book_outlined), findsWidgets);
 
     await tester.tap(find.text('图片'));
     await settleImages(tester);
@@ -127,6 +161,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已选 1 张'), findsOneWidget);
     expect(find.byIcon(Icons.drive_file_move_outline), findsOneWidget);
+  });
+
+  testWidgets('导入图片先选择章节并默认当前章节', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ComicEditPage(from: 'test', comicId: 'c1'),
+      ),
+    );
+    await settleImages(tester);
+
+    await tester.tap(find.text('章节'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('导入图片'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('选择章节'), findsOneWidget);
+    expect(find.textContaining('第1话'), findsWidgets);
+    expect(find.textContaining('第2话'), findsWidgets);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, '取消'));
+    await tester.pumpAndSettle();
+    expect(find.text('选择章节'), findsNothing);
   });
 
   testWidgets('宽屏使用左右分栏且不显示 Tab', (tester) async {
@@ -147,5 +204,8 @@ void main() {
     expect(find.text('基本信息'), findsNothing);
     expect(find.text('Original'), findsOneWidget);
     expect(find.text('第1话'), findsWidgets);
+    expect(find.byIcon(Icons.playlist_add), findsOneWidget);
+    expect(find.byIcon(Icons.add_photo_alternate_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.book_outlined), findsWidgets);
   });
 }

@@ -123,6 +123,77 @@ class ComicEditDocument {
     return ComicEditDocument._(nextDetail, nextChapters);
   }
 
+  /// 追加多个本地章节。
+  ///
+  /// 调用方负责生成唯一 `id`；顺序统一追加到末尾并重新编号。
+  ComicEditDocument addChapters(List<Map<String, dynamic>> newChapters) {
+    if (newChapters.isEmpty) return this;
+    final nextChapters = _deepCopyList(chapters);
+    final nextDetail = _deepCopyMap(detail);
+    final nextEps = _asList(nextDetail['eps']);
+    var order = _nextOrder(chapters);
+    for (final raw in newChapters) {
+      final chapter = _deepCopyMap(raw);
+      final id = comicEditChapterId(chapter);
+      if (id.isEmpty) {
+        throw ArgumentError('chapter id is empty');
+      }
+      if (_findChapterIndex(nextChapters, id) >= 0) {
+        throw StateError('chapter already exists: $id');
+      }
+      chapter['order'] = order++;
+      nextChapters.add(chapter);
+      nextEps.add(_epFromChapter(chapter));
+    }
+    nextDetail['eps'] = nextEps;
+    _syncMirror(nextDetail, nextChapters);
+    return ComicEditDocument._(nextDetail, nextChapters);
+  }
+
+  /// 向指定章节末尾追加图片。
+  ComicEditDocument appendImages(
+    String chapterId,
+    List<Map<String, dynamic>> newImages,
+  ) {
+    if (newImages.isEmpty) return this;
+    final key = chapterId.trim();
+    final index = _findChapterIndex(chapters, key);
+    if (index < 0) {
+      throw StateError('chapter not found: $chapterId');
+    }
+    final nextChapters = _deepCopyList(chapters);
+    final images = _asList(nextChapters[index]['images']);
+    images.addAll(newImages.map(_deepCopyMap));
+    nextChapters[index]['images'] = images;
+
+    final nextDetail = _deepCopyMap(detail);
+    _syncMirror(nextDetail, nextChapters);
+    return ComicEditDocument._(nextDetail, nextChapters);
+  }
+
+  /// 修改章节所属分卷（`groupTitle`）。空字符串表示不分组。
+  ComicEditDocument setChapterVolume(String chapterId, String groupTitle) {
+    final key = chapterId.trim();
+    final index = _findChapterIndex(chapters, key);
+    if (index < 0) {
+      throw StateError('chapter not found: $chapterId');
+    }
+    final value = groupTitle.trim();
+
+    final nextChapters = _deepCopyList(chapters);
+    nextChapters[index]['groupTitle'] = value;
+
+    final nextDetail = _deepCopyMap(detail);
+    final nextEps = _asList(nextDetail['eps']);
+    final epIndex = _findEpIndex(nextEps, key);
+    if (epIndex >= 0) {
+      nextEps[epIndex]['groupTitle'] = value;
+    }
+    nextDetail['eps'] = nextEps;
+    _syncMirror(nextDetail, nextChapters);
+    return ComicEditDocument._(nextDetail, nextChapters);
+  }
+
   /// 按给定章节 id 顺序重排，并重新编号 1..N。
   ///
   /// `order` 同时是阅读器的 `epsId`，重排后必须保持 1..N 连续且唯一。

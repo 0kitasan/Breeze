@@ -303,6 +303,65 @@ void main() {
     expect(jsonEncode(mirror), jsonEncode(jsonDecode(doc.toChaptersJson())));
   });
 
+  test('编辑分卷同步到章节、eps 与镜像', () {
+    final doc = _document().setChapterVolume('ch1', 'v01');
+
+    expect(doc.chapterMaps[0]['groupTitle'], 'v01');
+    expect(doc.eps[0]['groupTitle'], 'v01');
+    final mirror = doc.detail['extern']['downloadChapters'] as List;
+    expect((mirror[0] as Map)['groupTitle'], 'v01');
+  });
+
+  test('追加图片保留原顺序', () {
+    final doc = _document().appendImages('ch1', <Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'i3',
+        'name': '3.jpg',
+        'path': 'p3',
+        'url': 'u3',
+        'extern': <String, dynamic>{},
+      },
+    ]);
+
+    expect(_paths(doc.chapterMaps[0]), <String>['p1', 'p2', 'p3']);
+    final mirror = doc.detail['extern']['downloadChapters'] as List;
+    expect(_paths(Map<String, dynamic>.from(mirror[0] as Map)), <String>[
+      'p1',
+      'p2',
+      'p3',
+    ]);
+  });
+
+  test('批量追加章节自动编号并同步 eps', () {
+    final doc = _document().addChapters(<Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'local:a',
+        'name': 'A',
+        'logicalKey': 'local:a',
+        'storageChapterId': 'local:a',
+        'groupTitle': 'v02',
+        'images': <Map<String, dynamic>>[],
+      },
+      <String, dynamic>{
+        'id': 'local:b',
+        'name': 'B',
+        'logicalKey': 'local:b',
+        'storageChapterId': 'local:b',
+        'groupTitle': 'v02',
+        'images': <Map<String, dynamic>>[],
+      },
+    ]);
+
+    expect(doc.chapterMaps.map((chapter) => chapter['order']), <int>[
+      1,
+      2,
+      3,
+      4,
+    ]);
+    expect(doc.eps.map((ep) => ep['order']), <int>[1, 2, 3, 4]);
+    expect(doc.eps[2]['groupTitle'], 'v02');
+  });
+
   test('非法 JSON 直接抛 FormatException', () {
     expect(
       () => ComicEditDocument.fromJson(chaptersJson: '[]', detailJson: '[]'),

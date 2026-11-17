@@ -18,6 +18,8 @@ import 'package:zephyr/page/bookshelf/bloc/folder_shelf_bloc.dart';
 import 'package:zephyr/page/bookshelf/cubit/bookshelf_search_cubit.dart';
 import 'package:zephyr/page/bookshelf/cubit/search_status.dart';
 import 'package:zephyr/page/bookshelf/method/method.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_import.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_picker.dart';
 import 'package:zephyr/page/bookshelf/models/models.dart';
 import 'package:zephyr/page/bookshelf/service/comic_folder_service.dart';
 import 'package:zephyr/page/bookshelf/service/comic_link_service.dart';
@@ -450,6 +452,12 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
           label: t.bookshelf.newFolder,
           onTap: () => _showCreateFolderDialog(context),
         ),
+        if (state.mode == ShelfPageMode.download)
+          menuChild(
+            child: const Icon(Icons.library_add_outlined),
+            label: t.bookshelf.importExternalComic,
+            onTap: () => _importExternalComic(context),
+          ),
         if (state.mode == ShelfPageMode.download)
           menuChild(
             child: const Icon(Icons.file_download_outlined),
@@ -1088,6 +1096,63 @@ ComicFolderType _folderTypeOf(ShelfPageMode mode) {
     ShelfPageMode.download => ComicFolderType.download,
     ShelfPageMode.history => ComicFolderType.history,
   };
+}
+
+Future<void> _importExternalComic(BuildContext context) async {
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: Text(t.bookshelf.importExternalFolder),
+              subtitle: Text(t.bookshelf.importExternalFolderHint),
+              onTap: () => Navigator.of(sheetContext).pop('folder'),
+            ),
+          ListTile(
+            leading: const Icon(Icons.archive_outlined),
+            title: Text(t.bookshelf.importExternalArchive),
+            subtitle: Text(t.bookshelf.importExternalArchiveHint),
+            onTap: () => Navigator.of(sheetContext).pop('archive'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null) return;
+
+  try {
+    final picked = choice == 'folder'
+        ? await pickLocalComicDirectory()
+        : await pickLocalComicArchive();
+    if (picked == null) return;
+    if (!context.mounted) return;
+    showSuccessToast(t.bookshelf.importExternalStarted);
+
+    final result = await importLocalComic(
+      sourcePath: picked.path,
+      isDirectory: picked.isDirectory,
+      cleanupRoot: picked.cleanupRoot,
+      uncategorizedName: t.bookshelf.importUncategorized,
+    );
+
+    if (!context.mounted) return;
+    showSuccessToast(
+      t.bookshelf.importExternalCompleted(
+        title: result.title,
+        chapters: result.chapterCount,
+        images: result.imageCount,
+      ),
+    );
+    context.read<FolderShelfBloc>().add(const FolderShelfLoadRequested());
+  } catch (e, st) {
+    logger.e(e, stackTrace: st);
+    if (!context.mounted) return;
+    showErrorToast(t.error.importFailed(error: e.toString()));
+  }
 }
 
 Future<void> _importComic(BuildContext context) async {
