@@ -1,7 +1,10 @@
 # Miscellaneous
 *.class
 *.log
+logs/
 *.pyc
+*.pyo
+__pycache__/
 *.swp
 .DS_Store
 .atom/
@@ -115,3 +118,6 @@ native/generated/ir.json
 # （两者都叫 "Sentry"），触发 SPM 解析崩溃：
 #   insertObjects:atIndexes:]: count of array (16) differs from count of index set (15)
 **/xcshareddata/swiftpm/Package.resolved
+
+# 本地手动导入测试夹具（ffmpeg/zip/tar/7z/rar 生成，不提交）
+/test/fixtures/manual_import/

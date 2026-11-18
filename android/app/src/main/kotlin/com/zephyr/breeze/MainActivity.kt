@@ -8,6 +8,8 @@ import android.net.Uri
 import android.os.Build
 import android.os.Debug
 import android.os.Bundle
+import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
@@ -43,11 +45,15 @@ class MainActivity: FlutterFragmentActivity() {
     private val REALSR_CHANNEL = "realsr_super_resolution"
     private val FILE_PICKER_CHANNEL = "com.zephyr.breeze/file_picker"
     private val REQUEST_CODE_PICK_BACKUP_ZIP = 1001
+    private val REQUEST_CODE_PICK_COMIC_ARCHIVE = 1002
+    private val REQUEST_CODE_PICK_COMIC_DIRECTORY = 1003
 
     private var volumeKeyInterceptionEnabled = false
     private var volumeEventSink: EventChannel.EventSink? = null
     private var pendingFilePickerResult: MethodChannel.Result? = null
     private var pendingFilePickerDestPath: String? = null
+    private var pendingComicPickerResult: MethodChannel.Result? = null
+    private var pendingComicPickerDestDir: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         initRustlsPlatformVerifier(applicationContext)
@@ -199,6 +205,26 @@ class MainActivity: FlutterFragmentActivity() {
                         openBackupZipPicker()
                     }
                 }
+                "pickComicArchive" -> {
+                    val destDir = call.argument<String>("destDir")
+                    if (destDir == null) {
+                        result.error("INVALID_ARGS", "destDir is required", null)
+                    } else {
+                        pendingComicPickerResult = result
+                        pendingComicPickerDestDir = destDir
+                        openComicArchivePicker()
+                    }
+                }
+                "pickComicDirectory" -> {
+                    val destDir = call.argument<String>("destDir")
+                    if (destDir == null) {
+                        result.error("INVALID_ARGS", "destDir is required", null)
+                    } else {
+                        pendingComicPickerResult = result
+                        pendingComicPickerDestDir = destDir
+                        openComicDirectoryPicker()
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -218,6 +244,132 @@ class MainActivity: FlutterFragmentActivity() {
             pendingFilePickerResult = null
             pendingFilePickerDestPath = null
         }
+    }
+
+    private fun openComicArchivePicker() {
+        Log.i("FilePicker", "打开外部漫画压缩包选择器")
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf(
+                    "application/zip",
+                    "application/x-zip-compressed",
+                    "application/x-rar-compressed",
+                    "application/vnd.rar",
+                    "application/x-7z-compressed",
+                    "application/x-tar",
+                    "application/octet-stream"
+                )
+            )
+        }
+        try {
+            startActivityForResult(intent, REQUEST_CODE_PICK_COMIC_ARCHIVE)
+        } catch (e: Exception) {
+            Log.e("FilePicker", "打开压缩包选择器失败", e)
+            pendingComicPickerResult?.error("PICKER_ERROR", e.message, e.stackTraceToString())
+            pendingComicPickerResult = null
+            pendingComicPickerDestDir = null
+        }
+    }
+
+    private fun openComicDirectoryPicker() {
+        Log.i("FilePicker", "打开外部漫画文件夹选择器")
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+            )
+        }
+        try {
+            startActivityForResult(intent, REQUEST_CODE_PICK_COMIC_DIRECTORY)
+        } catch (e: Exception) {
+            Log.e("FilePicker", "打开文件夹选择器失败", e)
+            pendingComicPickerResult?.error("PICKER_ERROR", e.message, e.stackTraceToString())
+            pendingComicPickerResult = null
+            pendingComicPickerDestDir = null
+        }
+    }
+
+    private fun copyComicArchive(uri: Uri, destDir: String): Map<String, String> {
+        val targetDir = File(destDir)
+        targetDir.mkdirs()
+        val displayName = sanitizeFileName(queryDisplayName(uri) ?: "comic.cbz")
+        val target = File(targetDir, displayName)
+        copyUriToFile(uri, target)
+        return mapOf(
+            "path" to target.absolutePath,
+            "cleanupRoot" to targetDir.absolutePath
+        )
+    }
+
+    private fun copyComicDirectory(treeUri: Uri, destDir: String): Map<String, String> {
+        val targetDir = File(destDir)
+        targetDir.mkdirs()
+        val rootDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
+        val fallbackName = rootDocumentId
+            .substringAfterLast(':')
+            .substringAfterLast('/')
+            .ifBlank { "comic" }
+        val rootName = sanitizeFileName(
+            queryDisplayName(DocumentsContract.buildDocumentUriUsingTree(treeUri, rootDocumentId))
+                ?: fallbackName
+        )
+        val target = File(targetDir, rootName)
+        target.mkdirs()
+        copyDocumentChildren(treeUri, rootDocumentId, target)
+        return mapOf(
+            "path" to target.absolutePath,
+            "cleanupRoot" to targetDir.absolutePath
+        )
+    }
+
+    private fun copyDocumentChildren(treeUri: Uri, parentDocumentId: String, targetDir: File) {
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
+        val projection = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE
+        )
+        contentResolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val documentId = cursor.getString(0)
+                val name = sanitizeFileName(cursor.getString(1) ?: "unnamed")
+                val mimeType = cursor.getString(2)
+                val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
+                if (mimeType == DocumentsContract.Document.MIME_TYPE_DIR) {
+                    val childDir = File(targetDir, name)
+                    childDir.mkdirs()
+                    copyDocumentChildren(treeUri, documentId, childDir)
+                } else {
+                    copyUriToFile(childUri, File(targetDir, name))
+                }
+            }
+        } ?: throw IllegalStateException("Cannot list document children for $childrenUri")
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getString(0)
+            }
+        }
+        return uri.lastPathSegment
+    }
+
+    private fun sanitizeFileName(raw: String): String {
+        val cleaned = raw
+            .replace(Regex("[\\\\/:*?\"<>|\\u0000-\\u001f]"), "_")
+            .trim()
+            .trimEnd('.')
+        return if (cleaned.isEmpty() || cleaned == "." || cleaned == "..") "unnamed" else cleaned
     }
 
     private fun copyUriToFile(uri: Uri, destFile: File) {
@@ -261,6 +413,38 @@ class MainActivity: FlutterFragmentActivity() {
                 }.start()
             } else {
                 Log.i("FilePicker", "用户取消或失败")
+                result?.success(null)
+            }
+            return
+        }
+
+        if (requestCode == REQUEST_CODE_PICK_COMIC_ARCHIVE ||
+            requestCode == REQUEST_CODE_PICK_COMIC_DIRECTORY
+        ) {
+            Log.i("FilePicker", "onActivityResult comic: requestCode=$requestCode, resultCode=$resultCode")
+            val result = pendingComicPickerResult
+            val destDir = pendingComicPickerDestDir
+            pendingComicPickerResult = null
+            pendingComicPickerDestDir = null
+
+            if (resultCode == Activity.RESULT_OK && data?.data != null && destDir != null) {
+                val uri = data.data!!
+                Thread {
+                    try {
+                        val payload = if (requestCode == REQUEST_CODE_PICK_COMIC_ARCHIVE) {
+                            copyComicArchive(uri, destDir)
+                        } else {
+                            copyComicDirectory(uri, destDir)
+                        }
+                        Log.i("FilePicker", "外部漫画拷贝完成：$payload")
+                        runOnUiThread { result?.success(payload) }
+                    } catch (e: Exception) {
+                        Log.e("FilePicker", "外部漫画拷贝失败", e)
+                        runOnUiThread { result?.error("COPY_ERROR", e.message, e.stackTraceToString()) }
+                    }
+                }.start()
+            } else {
+                Log.i("FilePicker", "用户取消外部漫画选择")
                 result?.success(null)
             }
         }

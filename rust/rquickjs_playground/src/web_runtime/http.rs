@@ -10,6 +10,12 @@ pub struct HttpClientConfig {
     pub socks5_proxy: Option<String>,
     pub disable_tls_verify: bool,
     pub allow_private_network: bool,
+    /// 是否启用 DoH（DNS over HTTPS）。开启且 `doh_providers` 非空时，
+    /// 普通 HTTP 客户端与 ECH 都会用 DoH 解析，**与是否配置代理无关**。
+    pub doh_enabled: bool,
+    /// DoH 端点列表（完整 URL，例如 `https://doh.pub/dns-query`）。
+    /// 查询时全部并发，第一个有效答案胜出。
+    pub doh_providers: Vec<String>,
 }
 
 static HTTP_REQUESTS_BLOCKED: std::sync::atomic::AtomicBool =
@@ -59,6 +65,11 @@ impl Default for HttpClientConfig {
             socks5_proxy: None,
             disable_tls_verify: false,
             allow_private_network: false,
+            doh_enabled: true,
+            doh_providers: super::doh::DEFAULT_DOH_PROVIDERS
+                .iter()
+                .map(|url| (*url).to_string())
+                .collect(),
         }
     }
 }
@@ -339,7 +350,18 @@ pub fn configure_http_client(config: HttpClientConfig) -> AnyResult<()> {
     let mut state = http_client_state_cell()
         .lock()
         .map_err(|_| anyhow!(crate::tr!("http-client-state-lock-is-poisoned")))?;
+    let doh_changed = state.config.doh_enabled != config.doh_enabled
+        || state.config.doh_providers != config.doh_providers
+        || state.config.use_http_proxy != config.use_http_proxy
+        || state.config.http_proxy != config.http_proxy
+        || state.config.use_socks5_proxy != config.use_socks5_proxy
+        || state.config.socks5_proxy != config.socks5_proxy;
     state.config = config;
+    drop(state);
+    if doh_changed {
+        // 端点 / 代理一变，旧答案的「干净程度」就不可信了。
+        super::doh::reset_caches();
+    }
     HTTP_CONFIG_GENERATION.fetch_add(1, Ordering::Release);
     Ok(())
 }
@@ -349,6 +371,14 @@ pub fn current_http_client_config() -> HttpClientConfig {
         .lock()
         .map(|g| g.config.clone())
         .unwrap_or_default()
+}
+
+/// 当前配置代际。
+///
+/// 自己缓存 client 的模块（ECH / 前置）用它判断配置是否变过：代际一变就重建，
+/// 不需要监听任何设置项。
+pub(crate) fn http_config_generation() -> u64 {
+    HTTP_CONFIG_GENERATION.load(Ordering::Acquire)
 }
 
 thread_local! {
@@ -389,11 +419,170 @@ pub(crate) fn worker_http_config() -> HttpClientConfig {
     })
 }
 
-fn http_client() -> AnyResult<ClientWithMiddleware> {
-    let state = http_client_state_cell()
+/// 缓存 client 的最长存活时间。
+///
+/// 应用内改代理会 bump 代际，立刻重建；系统代理（Clash 的「系统代理」开关）
+/// 只改注册表、没有代际信号，靠 [`system_proxy_signature`] 兜底——开关一变，
+/// 下一次请求立刻重建；环境变量等其它变化最多 60s 后生效。
+const HTTP_CLIENT_TTL: Duration = Duration::from_secs(60);
+
+/// 当前系统代理的签名（Windows 注册表 / macOS SystemConfiguration）。
+///
+/// reqwest 只在**建 client 时**读一次系统代理，之后不会变。把签名放进缓存键，
+/// 用户切换 Clash 的「系统代理」后下一次请求就会重建 client，不用等 TTL。
+/// 其它平台返回空串（reqwest 自己处理 env / 系统配置）。
+///
+/// 系统配置读取最多每秒一次：请求路径上只多一次 mutex 读，切换开关 1s 内生效。
+pub(crate) fn system_proxy_signature() -> String {
+    static CACHE: LazyLock<Mutex<Option<(Instant, String)>>> = LazyLock::new(|| Mutex::new(None));
+    const TTL: Duration = Duration::from_secs(1);
+
+    let mut cache = CACHE
         .lock()
-        .map_err(|_| anyhow!(crate::tr!("http-client-state-lock-is-poisoned")))?;
-    build_http_client(&state.config)
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some((at, signature)) = cache.as_ref()
+        && at.elapsed() < TTL
+    {
+        return signature.clone();
+    }
+    let signature = read_system_proxy_signature();
+    *cache = Some((Instant::now(), signature.clone()));
+    signature
+}
+
+fn read_system_proxy_signature() -> String {
+    #[cfg(windows)]
+    {
+        use windows_registry::CURRENT_USER;
+        let Ok(settings) =
+            CURRENT_USER.open(r"Software\Microsoft\Windows\CurrentVersion\Internet Settings")
+        else {
+            return String::new();
+        };
+        let enabled = settings.get_u32("ProxyEnable").unwrap_or(0);
+        let server = settings.get_string("ProxyServer").unwrap_or_default();
+        format!("{enabled}|{server}")
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        use system_configuration::core_foundation::base::CFType;
+        use system_configuration::core_foundation::dictionary::CFDictionary;
+        use system_configuration::core_foundation::number::CFNumber;
+        use system_configuration::core_foundation::string::{CFString, CFStringRef};
+        use system_configuration::dynamic_store::SCDynamicStoreBuilder;
+        use system_configuration::sys::schema_definitions::{
+            kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPPort, kSCPropNetProxiesHTTPProxy,
+            kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesHTTPSPort, kSCPropNetProxiesHTTPSProxy,
+            kSCPropNetProxiesSOCKSEnable, kSCPropNetProxiesSOCKSPort, kSCPropNetProxiesSOCKSProxy,
+        };
+
+        fn read(
+            proxies: &CFDictionary<CFString, CFType>,
+            enabled_key: CFStringRef,
+            host_key: CFStringRef,
+            port_key: CFStringRef,
+        ) -> String {
+            let enabled = proxies
+                .find(enabled_key)
+                .and_then(|value| value.downcast::<CFNumber>())
+                .and_then(|value| value.to_i32())
+                .unwrap_or(0)
+                == 1;
+            if !enabled {
+                return String::new();
+            }
+            let host = proxies
+                .find(host_key)
+                .and_then(|value| value.downcast::<CFString>())
+                .map(|value| value.to_string())
+                .unwrap_or_default();
+            match proxies
+                .find(port_key)
+                .and_then(|value| value.downcast::<CFNumber>())
+                .and_then(|value| value.to_i32())
+            {
+                Some(port) => format!("{host}:{port}"),
+                None => host,
+            }
+        }
+
+        let Some(store) = SCDynamicStoreBuilder::new("breeze-system-proxy").build() else {
+            return String::new();
+        };
+        let Some(proxies) = store.get_proxies() else {
+            return String::new();
+        };
+        format!(
+            "http={}|https={}|socks={}",
+            read(
+                &proxies,
+                unsafe { kSCPropNetProxiesHTTPEnable },
+                unsafe { kSCPropNetProxiesHTTPProxy },
+                unsafe { kSCPropNetProxiesHTTPPort },
+            ),
+            read(
+                &proxies,
+                unsafe { kSCPropNetProxiesHTTPSEnable },
+                unsafe { kSCPropNetProxiesHTTPSProxy },
+                unsafe { kSCPropNetProxiesHTTPSPort },
+            ),
+            read(
+                &proxies,
+                unsafe { kSCPropNetProxiesSOCKSEnable },
+                unsafe { kSCPropNetProxiesSOCKSProxy },
+                unsafe { kSCPropNetProxiesSOCKSPort },
+            ),
+        )
+    }
+
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        String::new()
+    }
+}
+
+struct CachedHttpClient {
+    generation: u64,
+    system_proxy: String,
+    built_at: Instant,
+    client: ClientWithMiddleware,
+}
+
+static HTTP_CLIENT_CACHE: LazyLock<Mutex<Option<CachedHttpClient>>> =
+    LazyLock::new(|| Mutex::new(None));
+
+/// 取（必要时重建）普通请求用的 client。
+///
+/// 以前是每个请求都 `build()` 一次，好处是永远拿到最新配置，代价是每个请求
+/// 都要重新建连（TCP + TLS 握手）。现在按「配置代际 + 系统代理签名 + 60s TTL」缓存：
+/// - 应用内任何代理 / TLS / 内网策略变更 → 代际 +1 → 下一次请求重建；
+/// - 系统代理开关变化 → 签名变化 → 下一次请求重建；
+/// - 旧 client 被替换时 drop，连接池随之关闭，不会粘在旧代理上。
+fn http_client() -> AnyResult<ClientWithMiddleware> {
+    let config = current_http_client_config();
+    let generation = http_config_generation();
+    let system_proxy = system_proxy_signature();
+
+    let mut cache = HTTP_CLIENT_CACHE
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if let Some(cached) = cache.as_ref()
+        && cached.generation == generation
+        && cached.system_proxy == system_proxy
+        && cached.built_at.elapsed() < HTTP_CLIENT_TTL
+    {
+        return Ok(cached.client.clone());
+    }
+
+    let client = build_http_client(&config)?;
+    *cache = Some(CachedHttpClient {
+        generation,
+        system_proxy,
+        built_at: Instant::now(),
+        client: client.clone(),
+    });
+    Ok(client)
 }
 
 fn normalize_http_proxy_url(raw: &str) -> String {
@@ -415,7 +604,7 @@ fn normalize_socks5_proxy_url(raw: &str) -> String {
 /// 把当前代理配置应用到 `ClientBuilder`。
 ///
 /// 规则：HTTP 代理优先；`use_http_proxy` 为真但没填地址时允许回落到 SOCKS5。
-/// 普通客户端与域名前置客户端共用这份逻辑，避免两边行为不一致。
+/// 普通客户端、DoH 查询客户端与域名前置客户端共用这份逻辑，避免行为不一致。
 pub(crate) fn apply_proxy_config(
     builder: reqwest::ClientBuilder,
     config: &HttpClientConfig,
@@ -464,7 +653,12 @@ pub fn build_http_client_ex(
     config: &HttpClientConfig,
     options: BuildHttpClientOptions,
 ) -> AnyResult<ClientWithMiddleware> {
-    let mut builder = Client::builder().timeout(options.timeout.unwrap_or(Duration::from_secs(30)));
+    let mut builder = Client::builder()
+        .timeout(options.timeout.unwrap_or(Duration::from_secs(30)))
+        // 复用连接能省掉每请求一次握手；空闲 10s 就断开，这样 Clash 切节点后
+        // 最多粘 10s，不会一直走旧线路。
+        .pool_max_idle_per_host(4)
+        .pool_idle_timeout(Duration::from_secs(10));
     if let Some(connect_timeout) = options.connect_timeout {
         builder = builder.connect_timeout(connect_timeout);
     }
@@ -483,6 +677,13 @@ pub fn build_http_client_ex(
     }
     if let Some(ua) = options.user_agent.as_ref().filter(|s| !s.is_empty()) {
         builder = builder.user_agent(ua);
+    }
+
+    // DoH：用户开启且配置了端点时**无条件**挂上，与是否配置代理无关。
+    // DoH 查询走自己的 reqwest 客户端（复用同一份代理配置），失败/熔断时
+    // `DohResolver` 会自动回落系统解析。
+    if let Some(resolver) = super::doh::DohResolver::from_config(config) {
+        builder = builder.dns_resolver(resolver);
     }
 
     let client = builder
@@ -699,18 +900,33 @@ async fn http_request_inner_async(
 
     // 连接级失败才把 IP 标记为不健康：4xx/5xx 说明这个 IP 活着，
     // 只是请求被站点拒绝（风控 / 限流），换 IP 也未必有用。
-    let response = match builder.send().await {
+    // ECH 失败时用普通链路再试一次：ECH 只是「更好的握手」，不该让请求直接死掉。
+    // `try_clone` 对流式 body（multipart）返回 None，这时没有回退，行为与之前一致。
+    let request = builder
+        .build()
+        .context(crate::tr!("failed-to-send-http-request"))?;
+    let ech_fallback = if ech_client.is_some() {
+        request.try_clone()
+    } else {
+        None
+    };
+    let response = match client.execute(request).await {
         Ok(response) => response,
         Err(error) => {
             if let Some(target) = &front_target {
                 super::fronting::mark_front_host_unhealthy(&runtime, &target.ip);
             }
-            if ech_client.is_some() {
-                // ECH 的 TLS 抖动（如 InvalidContentType）重建一次大概率就好，
-                // 丢掉缓存让下一次请求重新拉 ECHConfig / 换 hint IP。
-                super::ech::invalidate_ech_client(&runtime, &url);
-            }
-            return Err(error).context(crate::tr!("failed-to-send-http-request"));
+            let Some(fallback) = ech_fallback else {
+                return Err(error).context(crate::tr!("failed-to-send-http-request"));
+            };
+            // ECH 的 TLS 抖动（如 InvalidContentType）重建一次大概率就好，
+            // 丢掉缓存让下一次请求重新拉 ECHConfig / 换 hint IP。
+            super::ech::invalidate_ech_client(&runtime, &url);
+            tracing::debug!("ech: request failed, retrying over the plain path: {error}");
+            http_client()?
+                .execute(fallback)
+                .await
+                .context(crate::tr!("failed-to-send-http-request"))?
         }
     };
     let ttfb = request_started.elapsed();
@@ -947,6 +1163,29 @@ mod tests {
         let error = result.expect_err("blocked request should fail");
         assert!(error.is_middleware());
         assert!(error.to_string().contains("HTTP"));
+    }
+
+    /// DoH 与代理无关：开启且有端点就挂，关掉或清空端点就不挂。
+    #[test]
+    fn doh_resolver_follows_config_not_proxy() {
+        let with_proxy = HttpClientConfig {
+            use_http_proxy: true,
+            http_proxy: Some("http://127.0.0.1:7890".to_string()),
+            ..Default::default()
+        };
+        assert!(super::super::doh::DohResolver::from_config(&with_proxy).is_some());
+
+        let disabled = HttpClientConfig {
+            doh_enabled: false,
+            ..Default::default()
+        };
+        assert!(super::super::doh::DohResolver::from_config(&disabled).is_none());
+
+        let no_providers = HttpClientConfig {
+            doh_providers: Vec::new(),
+            ..Default::default()
+        };
+        assert!(super::super::doh::DohResolver::from_config(&no_providers).is_none());
     }
 
     /// 未钉住且代际过期的缓存要被丢弃，回落到全局配置。

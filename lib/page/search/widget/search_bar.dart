@@ -9,6 +9,7 @@ import 'package:zephyr/page/search/widget/history.dart';
 import 'package:zephyr/page/search/widget/search_input_dialog.dart';
 import 'package:zephyr/page/search/widget/source_select_dialog.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/util/debouncer.dart';
 import 'package:zephyr/widgets/multi_choice_list_dialog.dart';
@@ -32,7 +33,9 @@ class _SearchBarState extends State<SearchBar> {
   List<({String pluginId, String title})> _sourceOptions(BuildContext context) {
     final registry = context.read<PluginRegistryCubit>().state;
     final states = PluginRegistryService.I.sortPlugins(
-      registry.plugins.values.where((state) => !state.isDeleted),
+      registry.plugins.values.where(
+        (state) => !state.isDeleted && !isLocalComicPluginId(state.uuid),
+      ),
     );
     return states
         .map(
@@ -387,9 +390,8 @@ class _PluginAdvancedSearchDialogState
           children: [
             Text(
               label,
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Row(
@@ -455,9 +457,8 @@ class _PluginAdvancedSearchDialogState
         children: [
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           Wrap(

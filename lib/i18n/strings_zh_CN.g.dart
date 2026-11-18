@@ -51,6 +51,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$navigation$zh_CN navigation = Translations$navigation$zh_CN.internal(_root);
 	late final Translations$settings$zh_CN settings = Translations$settings$zh_CN.internal(_root);
 	late final Translations$bookshelf$zh_CN bookshelf = Translations$bookshelf$zh_CN.internal(_root);
+	late final Translations$comicEdit$zh_CN comicEdit = Translations$comicEdit$zh_CN.internal(_root);
 	late final Translations$comicInfo$zh_CN comicInfo = Translations$comicInfo$zh_CN.internal(_root);
 	late final Translations$reader$zh_CN reader = Translations$reader$zh_CN.internal(_root);
 	late final Translations$plugin$zh_CN plugin = Translations$plugin$zh_CN.internal(_root);
@@ -555,6 +556,39 @@ class Translations$settings$zh_CN {
 
 	/// zh-CN: 'SOCKS5'
 	String get proxyTypeSocks5 => 'SOCKS5';
+
+	/// zh-CN: 'DNS over HTTPS'
+	String get doh => 'DNS over HTTPS';
+
+	/// zh-CN: '开启后使用 DoH 解析域名'
+	String get dohEnabledSubtitle => '开启后使用 DoH 解析域名';
+
+	/// zh-CN: 'DoH 端点'
+	String get dohProviders => 'DoH 端点';
+
+	/// zh-CN: '已启用 · $count 个端点'
+	String dohProviderCount({required Object count}) => '已启用 · ${count} 个端点';
+
+	/// zh-CN: '尚未配置 DoH 端点'
+	String get dohEmpty => '尚未配置 DoH 端点';
+
+	/// zh-CN: '添加 DoH 端点'
+	String get dohAdd => '添加 DoH 端点';
+
+	/// zh-CN: 'https://doh.pub/dns-query'
+	String get dohAddHint => 'https://doh.pub/dns-query';
+
+	/// zh-CN: '建议使用 IP 形式的地址以绕过 DNS 污染，例如 https://1.12.12.12/dns-query'
+	String get dohIpHint => '建议使用 IP 形式的地址以绕过 DNS 污染，例如 https://1.12.12.12/dns-query';
+
+	/// zh-CN: '请输入以 https:// 开头的完整地址'
+	String get dohInvalidUrl => '请输入以 https:// 开头的完整地址';
+
+	/// zh-CN: '恢复默认端点'
+	String get dohReset => '恢复默认端点';
+
+	/// zh-CN: 'DoH 用于防止 DNS 污染；可添加多个端点，自动使用最先返回的有效结果。'
+	String get dohNote => 'DoH 用于防止 DNS 污染；可添加多个端点，自动使用最先返回的有效结果。';
 
 	/// zh-CN: '内网拦截'
 	String get blockPrivateNetwork => '内网拦截';
@@ -1132,6 +1166,30 @@ class Translations$bookshelf$zh_CN {
 	/// zh-CN: '导入漫画'
 	String get importComic => '导入漫画';
 
+	/// zh-CN: '导入外部漫画'
+	String get importExternalComic => '导入外部漫画';
+
+	/// zh-CN: '开始导入外部漫画'
+	String get importExternalStarted => '开始导入外部漫画';
+
+	/// zh-CN: '选择文件夹'
+	String get importExternalFolder => '选择文件夹';
+
+	/// zh-CN: '扫描文件夹中的图片与压缩包'
+	String get importExternalFolderHint => '扫描文件夹中的图片与压缩包';
+
+	/// zh-CN: '选择压缩包'
+	String get importExternalArchive => '选择压缩包';
+
+	/// zh-CN: '支持 CBZ / CBR / CB7 / CBT'
+	String get importExternalArchiveHint => '支持 CBZ / CBR / CB7 / CBT';
+
+	/// zh-CN: '导入完成：$title（$chapters 章 / $images 张图）'
+	String importExternalCompleted({required Object title, required Object chapters, required Object images}) => '导入完成：${title}（${chapters} 章 / ${images} 张图）';
+
+	/// zh-CN: '未分类'
+	String get importUncategorized => '未分类';
+
 	/// zh-CN: '书架说明'
 	String get folderHint => '书架说明';
 
@@ -1368,6 +1426,159 @@ class Translations$bookshelf$zh_CN {
 
 	/// zh-CN: '确定要删除选中的 $count 条下载记录及文件吗？'
 	String confirmDeleteSelectedDownloads({required Object count}) => '确定要删除选中的 ${count} 条下载记录及文件吗？';
+}
+
+// Path: comicEdit
+class Translations$comicEdit$zh_CN {
+	Translations$comicEdit$zh_CN.internal(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// zh-CN: '编辑漫画'
+	String get title => '编辑漫画';
+
+	/// zh-CN: '暂时不能编辑'
+	String get lockedTitle => '暂时不能编辑';
+
+	/// zh-CN: '该漫画还有未完成的下载任务，请先在下载任务页完成或取消。'
+	String get lockedMessage => '该漫画还有未完成的下载任务，请先在下载任务页完成或取消。';
+
+	/// zh-CN: '基本信息'
+	String get basicInfo => '基本信息';
+
+	/// zh-CN: '章节'
+	String get chapters => '章节';
+
+	/// zh-CN: '图片'
+	String get images => '图片';
+
+	/// zh-CN: '漫画标题'
+	String get comicTitle => '漫画标题';
+
+	/// zh-CN: '输入新的漫画标题'
+	String get titleHint => '输入新的漫画标题';
+
+	/// zh-CN: '更换封面'
+	String get changeCover => '更换封面';
+
+	/// zh-CN: '从漫画图片选择'
+	String get chooseFromComic => '从漫画图片选择';
+
+	/// zh-CN: '选择封面图片'
+	String get chooseCoverImage => '选择封面图片';
+
+	/// zh-CN: '保存标题'
+	String get saveTitle => '保存标题';
+
+	/// zh-CN: '标题不能为空'
+	String get titleEmpty => '标题不能为空';
+
+	/// zh-CN: '章节名称'
+	String get chapterName => '章节名称';
+
+	/// zh-CN: '输入章节名称'
+	String get chapterNameHint => '输入章节名称';
+
+	/// zh-CN: '章节名称不能为空'
+	String get chapterNameEmpty => '章节名称不能为空';
+
+	/// zh-CN: '新增章节'
+	String get addChapter => '新增章节';
+
+	/// zh-CN: '输入新章节名称'
+	String get addChapterHint => '输入新章节名称';
+
+	/// zh-CN: '重命名章节'
+	String get renameChapter => '重命名章节';
+
+	/// zh-CN: '$count 页'
+	String pagesCount({required Object count}) => '${count} 页';
+
+	/// zh-CN: '本章暂无图片'
+	String get emptyChapter => '本章暂无图片';
+
+	/// zh-CN: '选择章节'
+	String get selectChapter => '选择章节';
+
+	/// zh-CN: '还没有章节'
+	String get noChapters => '还没有章节';
+
+	/// zh-CN: '移动到章节'
+	String get moveToChapter => '移动到章节';
+
+	/// zh-CN: '已选 $count 张'
+	String selectedCount({required Object count}) => '已选 ${count} 张';
+
+	/// zh-CN: '已移动 $count 张图片'
+	String movedCount({required Object count}) => '已移动 ${count} 张图片';
+
+	/// zh-CN: '删除图片'
+	String get deleteImagesTitle => '删除图片';
+
+	/// zh-CN: '确定删除选中的 $count 张图片吗？'
+	String deleteImagesMessage({required Object count}) => '确定删除选中的 ${count} 张图片吗？';
+
+	/// zh-CN: '已删除 $count 张图片'
+	String deletedCount({required Object count}) => '已删除 ${count} 张图片';
+
+	/// zh-CN: '全选'
+	String get selectAll => '全选';
+
+	/// zh-CN: '取消选择'
+	String get clearSelection => '取消选择';
+
+	/// zh-CN: '长按拖动排序'
+	String get reorderHint => '长按拖动排序';
+
+	/// zh-CN: '已保存'
+	String get saveSuccess => '已保存';
+
+	/// zh-CN: '封面已更新'
+	String get coverUpdated => '封面已更新';
+
+	/// zh-CN: '章节已新增'
+	String get chapterAdded => '章节已新增';
+
+	/// zh-CN: '章节已重命名'
+	String get chapterRenamed => '章节已重命名';
+
+	/// zh-CN: '导入章节'
+	String get importChapters => '导入章节';
+
+	/// zh-CN: '导入图片'
+	String get importImages => '导入图片';
+
+	/// zh-CN: '章节已导入'
+	String get chaptersImported => '章节已导入';
+
+	/// zh-CN: '已导入 $count 张图片'
+	String imagesImported({required Object count}) => '已导入 ${count} 张图片';
+
+	/// zh-CN: '编辑分卷'
+	String get editVolume => '编辑分卷';
+
+	/// zh-CN: '输入分卷名称，留空表示不分组'
+	String get volumeHint => '输入分卷名称，留空表示不分组';
+
+	/// zh-CN: '分卷：$name'
+	String volumeLabel({required Object name}) => '分卷：${name}';
+
+	/// zh-CN: '分卷已更新'
+	String get volumeUpdated => '分卷已更新';
+
+	/// zh-CN: '图片文件缺失'
+	String get imageMissing => '图片文件缺失';
+
+	/// zh-CN: '处理中...'
+	String get busy => '处理中...';
+
+	/// zh-CN: '下载记录不存在'
+	String get notFound => '下载记录不存在';
+
+	/// zh-CN: '加载失败'
+	String get loadFailed => '加载失败';
 }
 
 // Path: comicInfo
@@ -3028,8 +3239,8 @@ class Translations$about$zh_CN {
 	/// zh-CN: '喜欢这个项目吗？点个star支持一下吧！'
 	String get projectAddressDesc => '喜欢这个项目吗？点个star支持一下吧！';
 
-	/// zh-CN: '前往 GitHub 仓库 (deretame/Breeze) ⭐'
-	String get projectLink => '前往 GitHub 仓库 (deretame/Breeze) ⭐';
+	/// zh-CN: '前往 GitHub 仓库 (breeze-project-org/Breeze) ⭐'
+	String get projectLink => '前往 GitHub 仓库 (breeze-project-org/Breeze) ⭐';
 
 	/// zh-CN: '联系方式'
 	String get contact => '联系方式';
@@ -3967,6 +4178,9 @@ class Translations$download$zh_CN {
 	/// zh-CN: '等待中 ($count)'
 	String pending({required Object count}) => '等待中 (${count})';
 
+	/// zh-CN: '已选择 $count 章'
+	String selectedChapters({required Object count}) => '已选择 ${count} 章';
+
 	/// zh-CN: '已删除任务'
 	String get taskDeleted => '已删除任务';
 
@@ -4294,6 +4508,17 @@ extension on Translations {
 			'settings.proxyTypeSubtitle' => '选择代理协议',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.doh' => 'DNS over HTTPS',
+			'settings.dohEnabledSubtitle' => '开启后使用 DoH 解析域名',
+			'settings.dohProviders' => 'DoH 端点',
+			'settings.dohProviderCount' => ({required Object count}) => '已启用 · ${count} 个端点',
+			'settings.dohEmpty' => '尚未配置 DoH 端点',
+			'settings.dohAdd' => '添加 DoH 端点',
+			'settings.dohAddHint' => 'https://doh.pub/dns-query',
+			'settings.dohIpHint' => '建议使用 IP 形式的地址以绕过 DNS 污染，例如 https://1.12.12.12/dns-query',
+			'settings.dohInvalidUrl' => '请输入以 https:// 开头的完整地址',
+			'settings.dohReset' => '恢复默认端点',
+			'settings.dohNote' => 'DoH 用于防止 DNS 污染；可添加多个端点，自动使用最先返回的有效结果。',
 			'settings.blockPrivateNetwork' => '内网拦截',
 			'settings.blockPrivateNetworkSubtitle' => '拦截指向内网 / 保留地址段的请求（含域名前置的 IP 直连）；默认关闭',
 			'settings.updateAccelerate' => '更新下载加速',
@@ -4483,6 +4708,14 @@ extension on Translations {
 			'bookshelf.newFolder' => '新建文件夹',
 			'bookshelf.manage' => '管理',
 			'bookshelf.importComic' => '导入漫画',
+			'bookshelf.importExternalComic' => '导入外部漫画',
+			'bookshelf.importExternalStarted' => '开始导入外部漫画',
+			'bookshelf.importExternalFolder' => '选择文件夹',
+			'bookshelf.importExternalFolderHint' => '扫描文件夹中的图片与压缩包',
+			'bookshelf.importExternalArchive' => '选择压缩包',
+			'bookshelf.importExternalArchiveHint' => '支持 CBZ / CBR / CB7 / CBT',
+			'bookshelf.importExternalCompleted' => ({required Object title, required Object chapters, required Object images}) => '导入完成：${title}（${chapters} 章 / ${images} 张图）',
+			'bookshelf.importUncategorized' => '未分类',
 			'bookshelf.folderHint' => '书架说明',
 			'bookshelf.removeFromFolder' => '移出文件夹',
 			'bookshelf.deleteFavorite' => '删除收藏',
@@ -4562,6 +4795,54 @@ extension on Translations {
 			'bookshelf.confirmDeleteSelectedFavorites' => ({required Object count}) => '确定要删除选中的 ${count} 条收藏记录吗？',
 			'bookshelf.confirmDeleteSelectedHistory' => ({required Object count}) => '确定要删除选中的 ${count} 条历史记录吗？',
 			'bookshelf.confirmDeleteSelectedDownloads' => ({required Object count}) => '确定要删除选中的 ${count} 条下载记录及文件吗？',
+			'comicEdit.title' => '编辑漫画',
+			'comicEdit.lockedTitle' => '暂时不能编辑',
+			'comicEdit.lockedMessage' => '该漫画还有未完成的下载任务，请先在下载任务页完成或取消。',
+			'comicEdit.basicInfo' => '基本信息',
+			'comicEdit.chapters' => '章节',
+			'comicEdit.images' => '图片',
+			'comicEdit.comicTitle' => '漫画标题',
+			'comicEdit.titleHint' => '输入新的漫画标题',
+			'comicEdit.changeCover' => '更换封面',
+			'comicEdit.chooseFromComic' => '从漫画图片选择',
+			'comicEdit.chooseCoverImage' => '选择封面图片',
+			'comicEdit.saveTitle' => '保存标题',
+			'comicEdit.titleEmpty' => '标题不能为空',
+			'comicEdit.chapterName' => '章节名称',
+			'comicEdit.chapterNameHint' => '输入章节名称',
+			'comicEdit.chapterNameEmpty' => '章节名称不能为空',
+			'comicEdit.addChapter' => '新增章节',
+			'comicEdit.addChapterHint' => '输入新章节名称',
+			'comicEdit.renameChapter' => '重命名章节',
+			'comicEdit.pagesCount' => ({required Object count}) => '${count} 页',
+			'comicEdit.emptyChapter' => '本章暂无图片',
+			'comicEdit.selectChapter' => '选择章节',
+			'comicEdit.noChapters' => '还没有章节',
+			'comicEdit.moveToChapter' => '移动到章节',
+			'comicEdit.selectedCount' => ({required Object count}) => '已选 ${count} 张',
+			'comicEdit.movedCount' => ({required Object count}) => '已移动 ${count} 张图片',
+			'comicEdit.deleteImagesTitle' => '删除图片',
+			'comicEdit.deleteImagesMessage' => ({required Object count}) => '确定删除选中的 ${count} 张图片吗？',
+			'comicEdit.deletedCount' => ({required Object count}) => '已删除 ${count} 张图片',
+			'comicEdit.selectAll' => '全选',
+			'comicEdit.clearSelection' => '取消选择',
+			'comicEdit.reorderHint' => '长按拖动排序',
+			'comicEdit.saveSuccess' => '已保存',
+			'comicEdit.coverUpdated' => '封面已更新',
+			'comicEdit.chapterAdded' => '章节已新增',
+			'comicEdit.chapterRenamed' => '章节已重命名',
+			'comicEdit.importChapters' => '导入章节',
+			'comicEdit.importImages' => '导入图片',
+			'comicEdit.chaptersImported' => '章节已导入',
+			'comicEdit.imagesImported' => ({required Object count}) => '已导入 ${count} 张图片',
+			'comicEdit.editVolume' => '编辑分卷',
+			'comicEdit.volumeHint' => '输入分卷名称，留空表示不分组',
+			'comicEdit.volumeLabel' => ({required Object name}) => '分卷：${name}',
+			'comicEdit.volumeUpdated' => '分卷已更新',
+			'comicEdit.imageMissing' => '图片文件缺失',
+			'comicEdit.busy' => '处理中...',
+			'comicEdit.notFound' => '下载记录不存在',
+			'comicEdit.loadFailed' => '加载失败',
 			'comicInfo.follow' => '加入追更',
 			'comicInfo.unfollow' => '不再追更',
 			'comicInfo.exportComic' => '导出漫画',
@@ -4595,6 +4876,8 @@ extension on Translations {
 			'comicInfo.exportSuccess' => '导出成功',
 			'comicInfo.detailsNotLoaded' => '当前详情尚未加载完成',
 			'comicInfo.followed' => '已加入追更',
+			_ => null,
+		} ?? switch (path) {
 			'comicInfo.unfollowed' => '已取消追更',
 			'comicInfo.confirmUnfollowTitle' => '取消追更',
 			'comicInfo.confirmUnfollowContent' => ({required Object title}) => '确定不再追更《${title}》吗？',
@@ -4662,8 +4945,6 @@ extension on Translations {
 			'reader.perComicReadMode' => '启用本漫画设置',
 			'reader.perComicReadModeSubtitle' => '仅当前漫画生效',
 			'reader.perComicFollowGlobal' => '跟随全局',
-			_ => null,
-		} ?? switch (path) {
 			'reader.perComicGlobalIs' => '全局为',
 			'reader.perComicThisComic' => '本漫',
 			'reader.infoDisplay' => '信息项显示',
@@ -5084,7 +5365,7 @@ extension on Translations {
 			'about.networkError' => '网络错误',
 			'about.projectAddress' => '项目地址',
 			'about.projectAddressDesc' => '喜欢这个项目吗？点个star支持一下吧！',
-			'about.projectLink' => '前往 GitHub 仓库 (deretame/Breeze) ⭐',
+			'about.projectLink' => '前往 GitHub 仓库 (breeze-project-org/Breeze) ⭐',
 			'about.contact' => '联系方式',
 			'about.contactDesc' => '有任何想法或问题，欢迎来找我聊聊~',
 			'about.feedback' => '反馈与建议',
@@ -5109,6 +5390,8 @@ extension on Translations {
 			'about.disclaimerItem6Content' => '开发者保留随时修改、暂停或终止本项目的权利，且无需提前通知用户。开发者不对因项目修改、暂停或终止而导致的任何后果负责。',
 			'about.disclaimerItem7Title' => '7. 贡献者责任',
 			'about.disclaimerItem7Content' => '如果本项目接受外部贡献，贡献者的行为仅代表其个人立场，不代表开发者的观点或立场。开发者对贡献者的行为及其贡献内容不承担责任。',
+			_ => null,
+		} ?? switch (path) {
 			'about.disclaimerItem8Title' => '8. 法律合规性',
 			'about.disclaimerItem8Content' => '用户在使用本项目时，应确保其行为符合所在国家或地区的法律法规。开发者不对用户因违反法律法规而导致的任何后果负责。',
 			'about.disclaimerImportant' => '重要提示',
@@ -5176,8 +5459,6 @@ extension on Translations {
 			'discover.title' => '发现',
 			'discover.search' => '搜索',
 			'discover.settings' => '设置',
-			_ => null,
-		} ?? switch (path) {
 			'discover.pluginManagement' => '插件管理',
 			'discover.customOrder' => '自定义插件顺序',
 			'discover.resetOrder' => '恢复默认顺序',
@@ -5354,6 +5635,7 @@ extension on Translations {
 			'download.noTasks' => '暂无下载任务',
 			'download.downloading' => '正在下载',
 			'download.pending' => ({required Object count}) => '等待中 (${count})',
+			'download.selectedChapters' => ({required Object count}) => '已选择 ${count} 章',
 			'download.taskDeleted' => '已删除任务',
 			'download.deleteLastChapterContent' => '删除当前章节后，会删除下载记录，是否确认删除？',
 			'download.cancelTask' => '取消任务',

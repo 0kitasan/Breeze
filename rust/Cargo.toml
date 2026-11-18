@@ -70,12 +70,14 @@ terminal_size = "0.4.4"
 ferrous-opencc = { version = "0.4.0", features = ["japanese-conversion"] }
 brotli = "8.0.4"
 sevenz-rust = "0.6.1"
+tar = "0.4.44"
 webp = "0.3.1"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_bytes = "0.11.19"
 serde-xml-rs = "0.8.2"
 ciborium = "0.2.2"
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+rars = { version = "0.12.4", default-features = false }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.15.1"
@@ -99,12 +101,6 @@ opt-level = 1
 # 减少增量编译生成的碎片文件
 incremental = true
 
-# 临时 patch：rquickjs-sys 0.12.0 在 Windows 交叉编译 Android 时，
-# host 构建会错误使用 Android NDK 的 libclang 生成绑定，导致 JSValue 类型不匹配。
-# 详见：https://github.com/DelSkayn/rquickjs/issues/709
-[patch.crates-io]
-rquickjs-sys = { git = "https://github.com/deretame/rquickjs.git", branch = "fix/android-windows-bindgen" }
-
 # 可选功能：域名前置（IP 直连 / SNI 绕过）。
 # 默认关闭（不进 default features）。开启后宿主才会注册 __http_set/get/clear_front_hosts
 # 三个全局函数；关闭时这三个函数不会被注册，插件探测到缺失即视为「宿主不支持」，
@@ -114,3 +110,7 @@ rquickjs-sys = { git = "https://github.com/deretame/rquickjs.git", branch = "fix
 # 所以这里必须**转发**该 feature，而不是只声明一个空 feature——否则 feature 打开后
 # 门控代码仍不会被编译，三个全局函数不会注册。
 host-fronting = ["rquickjs_playground/host-fronting"]
+
+[patch.crates-io]
+# quickjs-ng 0.15.1 + 安全/性能补丁，补丁清单见 fork 仓库的 PATCHES.md。
+rquickjs-sys = { git = "https://github.com/deretame/breeze-rquickjs-sys", rev = "846889c482ee7511f558595384673f55c00c9f4a" }
