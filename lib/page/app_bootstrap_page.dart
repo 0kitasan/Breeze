@@ -11,6 +11,7 @@ import 'package:zephyr/main.dart';
 import 'package:zephyr/object_box/migration/compatible.dart';
 import 'package:zephyr/plugin/bridge/dart_tools_bridge.dart';
 import 'package:zephyr/plugin/bridge/plugin_config_bridge.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 import 'package:zephyr/plugin/plugin_cloud_update_service.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
 import 'package:zephyr/service/lifecycle/foreground_task/foreground_task_service.dart';
@@ -87,6 +88,7 @@ class _AppBootstrapViewState extends State<AppBootstrapView> {
     if (mounted) await ensureCompatibleMigration(context);
 
     updateStatus(t.appBootstrap.initializing);
+    await ensureLocalComicPluginInstalled();
     await PluginRegistryService.I.init();
     await PluginRegistryService.I.warmupPluginInfos();
     PluginCloudUpdateService.I.scheduleSilentCloudUpdate(

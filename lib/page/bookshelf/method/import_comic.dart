@@ -13,6 +13,7 @@ import 'package:zephyr/page/download/models/unified_comic_download.dart';
 import 'package:zephyr/service/download/download_asset_store.dart';
 import 'package:zephyr/src/rust/api/data_backup.dart';
 import 'package:zephyr/src/rust/api/simple.dart';
+import 'package:zephyr/type/enum.dart';
 import 'package:zephyr/util/get_path.dart';
 import 'package:zephyr/widgets/toast.dart';
 
@@ -257,7 +258,8 @@ Future<ComicImportResult> _importComic(
   await _importCover(
     originalJson: originalJson,
     importDir: importDir,
-    targetComicDir: targetComicDir,
+    from: from,
+    comicId: comicId,
   );
   await _importChapters(
     originalJson: originalJson,
@@ -343,7 +345,8 @@ String _readSource(Map<String, dynamic> json) {
 Future<void> _importCover({
   required Map<String, dynamic> originalJson,
   required String importDir,
-  required String targetComicDir,
+  required String from,
+  required String comicId,
 }) async {
   final originalCover = _readCover(originalJson);
   if (originalCover == null) return;
@@ -364,13 +367,18 @@ Future<void> _importCover({
     return;
   }
 
-  final targetCoverPath = p.join(
-    targetComicDir,
-    encodePath(path: ''),
-    encodePath(path: normalizeStoredAssetPath(originalCoverPath)),
+  // 与阅读时共用 DownloadAssetStore 的 canonical 布局，避免两处路径规则漂移。
+  final coverStore = DownloadAssetStore(
+    from: from,
+    path: originalCoverPath,
+    cartoonId: comicId,
+    chapterId: '',
+    storageChapterId: '',
+    pictureType: PictureType.cover,
   );
+  final targetCoverPath = await coverStore.canonicalDownloadPath();
 
-  await Directory(targetComicDir).create(recursive: true);
+  await DownloadAssetStore.ensureParentDirectory(targetCoverPath);
   await sourceFile.copy(targetCoverPath);
 }
 
@@ -470,6 +478,15 @@ Future<void> _importChapters({
   }
 }
 
+String _preferredChapterName(
+  Map<String, dynamic> original,
+  Map<String, dynamic> processed,
+) {
+  final originalName = original['name']?.toString().trim() ?? '';
+  if (originalName.isNotEmpty) return originalName;
+  return processed['name']?.toString() ?? '';
+}
+
 List<Map<String, dynamic>> _buildChapters({
   required Map<String, dynamic> originalJson,
   required Map<String, dynamic> processedJson,
@@ -518,10 +535,7 @@ List<Map<String, dynamic>> _buildChapters({
 
     result.add({
       ...originalChapter,
-      'name':
-          processedChapter['name']?.toString() ??
-          originalChapter['name']?.toString() ??
-          '',
+      'name': _preferredChapterName(originalChapter, processedChapter),
       'order': processedChapter['order'] ?? originalChapter['order'] ?? (i + 1),
       'id': storageKey,
       'storageChapterId': storageKey,
@@ -547,10 +561,7 @@ Map<String, dynamic> _buildDetailJson({
     final originalEp = _matchOriginalChapter(originalEps, processedEp, i);
     newEps.add({
       ...originalEp,
-      'name':
-          processedEp['name']?.toString() ??
-          originalEp['name']?.toString() ??
-          '',
+      'name': _preferredChapterName(originalEp, processedEp),
       'order': processedEp['order'] ?? originalEp['order'] ?? (i + 1),
     });
   }

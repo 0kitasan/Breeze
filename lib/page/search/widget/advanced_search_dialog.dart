@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zephyr/cubit/plugin_registry_cubit.dart';
 import 'package:zephyr/page/search/cubit/search_cubit.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 import 'package:zephyr/type/pipe.dart';
 import 'package:zephyr/i18n/strings.g.dart';
 import 'package:zephyr/util/text/chinese_convert.dart';
@@ -75,7 +76,10 @@ class _AdvancedSearchDialogState extends State<AdvancedSearchDialog> {
     final registry = context.watch<PluginRegistryCubit>().state;
     final sources = PluginRegistryService.I.sortPlugins(
       registry.plugins.values.where(
-        (plugin) => plugin.isEnabled && !plugin.isDeleted,
+        (plugin) =>
+            plugin.isEnabled &&
+            !plugin.isDeleted &&
+            !isLocalComicPluginId(plugin.uuid),
       ),
     );
 

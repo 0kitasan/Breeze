@@ -18,6 +18,8 @@ import 'package:zephyr/page/bookshelf/bloc/folder_shelf_bloc.dart';
 import 'package:zephyr/page/bookshelf/cubit/bookshelf_search_cubit.dart';
 import 'package:zephyr/page/bookshelf/cubit/search_status.dart';
 import 'package:zephyr/page/bookshelf/method/method.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_import.dart';
+import 'package:zephyr/page/bookshelf/method/local_comic_picker.dart';
 import 'package:zephyr/page/bookshelf/models/models.dart';
 import 'package:zephyr/page/bookshelf/service/comic_folder_service.dart';
 import 'package:zephyr/page/bookshelf/service/comic_link_service.dart';
@@ -204,6 +206,8 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
       );
     }
     if (oldWidget.isActive != widget.isActive && mounted) {
+      // 切 tab 只同步返回拦截 entry，不自动重载列表：用户没要求刷新时
+      // 列表不应因切 tab 而重排/换封面。
       // 切 tab 时按新可见性同步：后台 tab 释放 entry，避免抢返回；
       // 前台 tab 按当前 bloc 状态补回 entry。
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -226,9 +230,8 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
       listener: (context, state) {
         final error = state.error;
         if (error != null && error.isNotEmpty) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(error)));
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(error)));
         }
         if (state.currentPath != _lastPath) {
           _lastPath = state.currentPath;
@@ -451,6 +454,12 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
         ),
         if (state.mode == ShelfPageMode.download)
           menuChild(
+            child: const Icon(Icons.library_add_outlined),
+            label: t.bookshelf.importExternalComic,
+            onTap: () => _importExternalComic(context),
+          ),
+        if (state.mode == ShelfPageMode.download)
+          menuChild(
             child: const Icon(Icons.file_download_outlined),
             label: t.bookshelf.importComic,
             onTap: () => _importComic(context),
@@ -588,6 +597,8 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
             final shelfList = detailed
                 ? CustomScrollView(
                     key: ValueKey('shelf-${state.currentPath}'),
+                    // 内容不足一屏时也要能下拉，否则 RefreshIndicator 收不到手势。
+                    physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       SliverPadding(
                         padding: listPadding,
@@ -601,6 +612,8 @@ class _FolderShelfPageContentState extends State<_FolderShelfPageContent>
                   )
                 : GridView.builder(
                     key: ValueKey('shelf-${state.currentPath}'),
+                    // 内容不足一屏时也要能下拉，否则 RefreshIndicator 收不到手势。
+                    physics: const AlwaysScrollableScrollPhysics(),
                     // 悬浮物盖在列表上层：子文件夹有面包屑浮栏，留 64px 顶部滚动边距；
                     // 根目录无顶部悬浮物，选择模式无悬浮物，均保持 10。
                     // 右下角按钮 56px + bottom 16：底部留 88，避免挡住最后一行漫画。
@@ -1085,6 +1098,63 @@ ComicFolderType _folderTypeOf(ShelfPageMode mode) {
   };
 }
 
+Future<void> _importExternalComic(BuildContext context) async {
+  final choice = await showModalBottomSheet<String>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!Platform.isIOS)
+            ListTile(
+              leading: const Icon(Icons.folder_open_outlined),
+              title: Text(t.bookshelf.importExternalFolder),
+              subtitle: Text(t.bookshelf.importExternalFolderHint),
+              onTap: () => Navigator.of(sheetContext).pop('folder'),
+            ),
+          ListTile(
+            leading: const Icon(Icons.archive_outlined),
+            title: Text(t.bookshelf.importExternalArchive),
+            subtitle: Text(t.bookshelf.importExternalArchiveHint),
+            onTap: () => Navigator.of(sheetContext).pop('archive'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (choice == null) return;
+
+  try {
+    final picked = choice == 'folder'
+        ? await pickLocalComicDirectory()
+        : await pickLocalComicArchive();
+    if (picked == null) return;
+    if (!context.mounted) return;
+    showSuccessToast(t.bookshelf.importExternalStarted);
+
+    final result = await importLocalComic(
+      sourcePath: picked.path,
+      isDirectory: picked.isDirectory,
+      cleanupRoot: picked.cleanupRoot,
+      uncategorizedName: t.bookshelf.importUncategorized,
+    );
+
+    if (!context.mounted) return;
+    showSuccessToast(
+      t.bookshelf.importExternalCompleted(
+        title: result.title,
+        chapters: result.chapterCount,
+        images: result.imageCount,
+      ),
+    );
+    context.read<FolderShelfBloc>().add(const FolderShelfLoadRequested());
+  } catch (e, st) {
+    logger.e(e, stackTrace: st);
+    if (!context.mounted) return;
+    showErrorToast(t.error.importFailed(error: e.toString()));
+  }
+}
+
 Future<void> _importComic(BuildContext context) async {
   String? importRoot;
   String? cleanupDir;
@@ -1167,9 +1237,8 @@ Future<void> _batchExportSelected(
       .toList();
 
   if (selectedComics.isEmpty) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(t.bookshelf.noExportableComics)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(t.bookshelf.noExportableComics)));
     return;
   }
 

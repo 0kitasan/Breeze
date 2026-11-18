@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/comic_archive.dart';
 import 'api/data_backup.dart';
 import 'api/http.dart';
 import 'api/image.dart';
@@ -18,11 +19,15 @@ import 'api/system.dart';
 import 'api/user_utils.dart';
 import 'api/webdav.dart';
 import 'compressed/compressed.dart';
+
 import 'dart:async';
 import 'dart:convert';
+
 import 'decode/decode.dart';
 import 'frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
+
 import 'qjs.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {

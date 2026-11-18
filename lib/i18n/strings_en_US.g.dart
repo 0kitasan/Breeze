@@ -46,6 +46,7 @@ class TranslationsEnUs extends Translations with BaseTranslations<AppLocale, Tra
 	@override late final _Translations$navigation$en_US navigation = _Translations$navigation$en_US._(_root);
 	@override late final _Translations$settings$en_US settings = _Translations$settings$en_US._(_root);
 	@override late final _Translations$bookshelf$en_US bookshelf = _Translations$bookshelf$en_US._(_root);
+	@override late final _Translations$comicEdit$en_US comicEdit = _Translations$comicEdit$en_US._(_root);
 	@override late final _Translations$comicInfo$en_US comicInfo = _Translations$comicInfo$en_US._(_root);
 	@override late final _Translations$reader$en_US reader = _Translations$reader$en_US._(_root);
 	@override late final _Translations$plugin$en_US plugin = _Translations$plugin$en_US._(_root);
@@ -264,6 +265,17 @@ class _Translations$settings$en_US extends Translations$settings$zh_CN {
 	@override String get proxyTypeSubtitle => 'Choose proxy protocol';
 	@override String get proxyTypeHttp => 'HTTP';
 	@override String get proxyTypeSocks5 => 'SOCKS5';
+	@override String get doh => 'DNS over HTTPS';
+	@override String get dohEnabledSubtitle => 'Resolve domains over DoH when enabled';
+	@override String get dohProviders => 'DoH endpoints';
+	@override String dohProviderCount({required Object count}) => 'Enabled · ${count} endpoints';
+	@override String get dohEmpty => 'No DoH endpoint configured';
+	@override String get dohAdd => 'Add DoH endpoint';
+	@override String get dohAddHint => 'https://doh.pub/dns-query';
+	@override String get dohIpHint => 'Prefer IP-based addresses to bypass DNS pollution, e.g. https://1.12.12.12/dns-query';
+	@override String get dohInvalidUrl => 'Enter a full address starting with https://';
+	@override String get dohReset => 'Restore default endpoints';
+	@override String get dohNote => 'DoH protects against DNS pollution. Add multiple endpoints; the first valid result is used.';
 	@override String get blockPrivateNetwork => 'Block private network';
 	@override String get blockPrivateNetworkSubtitle => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default';
 	@override String get updateAccelerate => 'Update acceleration';
@@ -463,6 +475,14 @@ class _Translations$bookshelf$en_US extends Translations$bookshelf$zh_CN {
 	@override String get newFolder => 'New folder';
 	@override String get manage => 'Manage';
 	@override String get importComic => 'Import comic';
+	@override String get importExternalComic => 'Import external comic';
+	@override String get importExternalStarted => 'Importing external comic';
+	@override String get importExternalFolder => 'Choose folder';
+	@override String get importExternalFolderHint => 'Scan images and archives in a folder';
+	@override String get importExternalArchive => 'Choose archive';
+	@override String get importExternalArchiveHint => 'Supports CBZ / CBR / CB7 / CBT';
+	@override String importExternalCompleted({required Object title, required Object chapters, required Object images}) => 'Imported: ${title} (${chapters} chapters / ${images} pages)';
+	@override String get importUncategorized => 'Uncategorized';
 	@override String get folderHint => 'Bookshelf hints';
 	@override String get removeFromFolder => 'Remove from folder';
 	@override String get deleteFavorite => 'Remove favorite';
@@ -541,6 +561,63 @@ class _Translations$bookshelf$en_US extends Translations$bookshelf$zh_CN {
 	@override String confirmDeleteSelectedFavorites({required Object count}) => 'Delete selected ${count} favorite records?';
 	@override String confirmDeleteSelectedHistory({required Object count}) => 'Delete selected ${count} history records?';
 	@override String confirmDeleteSelectedDownloads({required Object count}) => 'Delete selected ${count} download records and files?';
+}
+
+// Path: comicEdit
+class _Translations$comicEdit$en_US extends Translations$comicEdit$zh_CN {
+	_Translations$comicEdit$en_US._(TranslationsEnUs root) : this._root = root, super.internal(root);
+
+	final TranslationsEnUs _root; // ignore: unused_field
+
+	// Translations
+	@override String get title => 'Edit comic';
+	@override String get lockedTitle => 'Editing unavailable';
+	@override String get lockedMessage => 'This comic still has unfinished downloads. Finish or cancel them on the download tasks page first.';
+	@override String get basicInfo => 'Basic info';
+	@override String get chapters => 'Chapters';
+	@override String get images => 'Pages';
+	@override String get comicTitle => 'Comic title';
+	@override String get titleHint => 'Enter a new comic title';
+	@override String get changeCover => 'Change cover';
+	@override String get chooseFromComic => 'Choose from comic pages';
+	@override String get chooseCoverImage => 'Choose cover page';
+	@override String get saveTitle => 'Save title';
+	@override String get titleEmpty => 'Title cannot be empty';
+	@override String get chapterName => 'Chapter name';
+	@override String get chapterNameHint => 'Enter a chapter name';
+	@override String get chapterNameEmpty => 'Chapter name cannot be empty';
+	@override String get addChapter => 'Add chapter';
+	@override String get addChapterHint => 'Enter a new chapter name';
+	@override String get renameChapter => 'Rename chapter';
+	@override String pagesCount({required Object count}) => '${count} pages';
+	@override String get emptyChapter => 'No pages in this chapter';
+	@override String get selectChapter => 'Select chapter';
+	@override String get noChapters => 'No chapters yet';
+	@override String get moveToChapter => 'Move to chapter';
+	@override String selectedCount({required Object count}) => '${count} selected';
+	@override String movedCount({required Object count}) => 'Moved ${count} pages';
+	@override String get deleteImagesTitle => 'Delete pages';
+	@override String deleteImagesMessage({required Object count}) => 'Delete the selected ${count} pages?';
+	@override String deletedCount({required Object count}) => 'Deleted ${count} pages';
+	@override String get selectAll => 'Select all';
+	@override String get clearSelection => 'Clear selection';
+	@override String get reorderHint => 'Long-press and drag to reorder';
+	@override String get saveSuccess => 'Saved';
+	@override String get coverUpdated => 'Cover updated';
+	@override String get chapterAdded => 'Chapter added';
+	@override String get chapterRenamed => 'Chapter renamed';
+	@override String get importChapters => 'Import chapters';
+	@override String get importImages => 'Import pages';
+	@override String get chaptersImported => 'Chapters imported';
+	@override String imagesImported({required Object count}) => 'Imported ${count} pages';
+	@override String get editVolume => 'Edit volume';
+	@override String get volumeHint => 'Enter a volume name; leave empty for no grouping';
+	@override String volumeLabel({required Object name}) => 'Volume: ${name}';
+	@override String get volumeUpdated => 'Volume updated';
+	@override String get imageMissing => 'Image file missing';
+	@override String get busy => 'Working...';
+	@override String get notFound => 'Download record not found';
+	@override String get loadFailed => 'Failed to load';
 }
 
 // Path: comicInfo
@@ -1159,7 +1236,7 @@ class _Translations$about$en_US extends Translations$about$zh_CN {
 	@override String get networkError => 'Network error';
 	@override String get projectAddress => 'Project';
 	@override String get projectAddressDesc => 'Like this project? Give it a star on GitHub!';
-	@override String get projectLink => 'Go to GitHub repo (deretame/Breeze) ⭐';
+	@override String get projectLink => 'Go to GitHub repo (breeze-project-org/Breeze) ⭐';
 	@override String get contact => 'Contact';
 	@override String get contactDesc => 'Have ideas or questions? Feel free to reach out~';
 	@override String get feedback => 'Feedback';
@@ -1562,6 +1639,7 @@ class _Translations$download$en_US extends Translations$download$zh_CN {
 	@override String get noTasks => 'No download tasks';
 	@override String get downloading => 'Downloading';
 	@override String pending({required Object count}) => 'Pending (${count})';
+	@override String selectedChapters({required Object count}) => 'Selected ${count} chapters';
 	@override String get taskDeleted => 'Task deleted';
 	@override String get deleteLastChapterContent => 'Deleting this chapter will also delete the download record. Continue?';
 	@override String get cancelTask => 'Cancel Task';
@@ -1798,6 +1876,17 @@ extension on TranslationsEnUs {
 			'settings.proxyTypeSubtitle' => 'Choose proxy protocol',
 			'settings.proxyTypeHttp' => 'HTTP',
 			'settings.proxyTypeSocks5' => 'SOCKS5',
+			'settings.doh' => 'DNS over HTTPS',
+			'settings.dohEnabledSubtitle' => 'Resolve domains over DoH when enabled',
+			'settings.dohProviders' => 'DoH endpoints',
+			'settings.dohProviderCount' => ({required Object count}) => 'Enabled · ${count} endpoints',
+			'settings.dohEmpty' => 'No DoH endpoint configured',
+			'settings.dohAdd' => 'Add DoH endpoint',
+			'settings.dohAddHint' => 'https://doh.pub/dns-query',
+			'settings.dohIpHint' => 'Prefer IP-based addresses to bypass DNS pollution, e.g. https://1.12.12.12/dns-query',
+			'settings.dohInvalidUrl' => 'Enter a full address starting with https://',
+			'settings.dohReset' => 'Restore default endpoints',
+			'settings.dohNote' => 'DoH protects against DNS pollution. Add multiple endpoints; the first valid result is used.',
 			'settings.blockPrivateNetwork' => 'Block private network',
 			'settings.blockPrivateNetworkSubtitle' => 'Block requests to private / reserved addresses, including IP-direct fronting; off by default',
 			'settings.updateAccelerate' => 'Update acceleration',
@@ -1988,6 +2077,14 @@ extension on TranslationsEnUs {
 			'bookshelf.newFolder' => 'New folder',
 			'bookshelf.manage' => 'Manage',
 			'bookshelf.importComic' => 'Import comic',
+			'bookshelf.importExternalComic' => 'Import external comic',
+			'bookshelf.importExternalStarted' => 'Importing external comic',
+			'bookshelf.importExternalFolder' => 'Choose folder',
+			'bookshelf.importExternalFolderHint' => 'Scan images and archives in a folder',
+			'bookshelf.importExternalArchive' => 'Choose archive',
+			'bookshelf.importExternalArchiveHint' => 'Supports CBZ / CBR / CB7 / CBT',
+			'bookshelf.importExternalCompleted' => ({required Object title, required Object chapters, required Object images}) => 'Imported: ${title} (${chapters} chapters / ${images} pages)',
+			'bookshelf.importUncategorized' => 'Uncategorized',
 			'bookshelf.folderHint' => 'Bookshelf hints',
 			'bookshelf.removeFromFolder' => 'Remove from folder',
 			'bookshelf.deleteFavorite' => 'Remove favorite',
@@ -2066,6 +2163,54 @@ extension on TranslationsEnUs {
 			'bookshelf.confirmDeleteSelectedFavorites' => ({required Object count}) => 'Delete selected ${count} favorite records?',
 			'bookshelf.confirmDeleteSelectedHistory' => ({required Object count}) => 'Delete selected ${count} history records?',
 			'bookshelf.confirmDeleteSelectedDownloads' => ({required Object count}) => 'Delete selected ${count} download records and files?',
+			'comicEdit.title' => 'Edit comic',
+			'comicEdit.lockedTitle' => 'Editing unavailable',
+			'comicEdit.lockedMessage' => 'This comic still has unfinished downloads. Finish or cancel them on the download tasks page first.',
+			'comicEdit.basicInfo' => 'Basic info',
+			'comicEdit.chapters' => 'Chapters',
+			'comicEdit.images' => 'Pages',
+			'comicEdit.comicTitle' => 'Comic title',
+			'comicEdit.titleHint' => 'Enter a new comic title',
+			'comicEdit.changeCover' => 'Change cover',
+			'comicEdit.chooseFromComic' => 'Choose from comic pages',
+			'comicEdit.chooseCoverImage' => 'Choose cover page',
+			'comicEdit.saveTitle' => 'Save title',
+			'comicEdit.titleEmpty' => 'Title cannot be empty',
+			'comicEdit.chapterName' => 'Chapter name',
+			'comicEdit.chapterNameHint' => 'Enter a chapter name',
+			'comicEdit.chapterNameEmpty' => 'Chapter name cannot be empty',
+			'comicEdit.addChapter' => 'Add chapter',
+			'comicEdit.addChapterHint' => 'Enter a new chapter name',
+			'comicEdit.renameChapter' => 'Rename chapter',
+			'comicEdit.pagesCount' => ({required Object count}) => '${count} pages',
+			'comicEdit.emptyChapter' => 'No pages in this chapter',
+			'comicEdit.selectChapter' => 'Select chapter',
+			'comicEdit.noChapters' => 'No chapters yet',
+			'comicEdit.moveToChapter' => 'Move to chapter',
+			'comicEdit.selectedCount' => ({required Object count}) => '${count} selected',
+			'comicEdit.movedCount' => ({required Object count}) => 'Moved ${count} pages',
+			'comicEdit.deleteImagesTitle' => 'Delete pages',
+			'comicEdit.deleteImagesMessage' => ({required Object count}) => 'Delete the selected ${count} pages?',
+			'comicEdit.deletedCount' => ({required Object count}) => 'Deleted ${count} pages',
+			'comicEdit.selectAll' => 'Select all',
+			'comicEdit.clearSelection' => 'Clear selection',
+			'comicEdit.reorderHint' => 'Long-press and drag to reorder',
+			'comicEdit.saveSuccess' => 'Saved',
+			'comicEdit.coverUpdated' => 'Cover updated',
+			'comicEdit.chapterAdded' => 'Chapter added',
+			'comicEdit.chapterRenamed' => 'Chapter renamed',
+			'comicEdit.importChapters' => 'Import chapters',
+			'comicEdit.importImages' => 'Import pages',
+			'comicEdit.chaptersImported' => 'Chapters imported',
+			'comicEdit.imagesImported' => ({required Object count}) => 'Imported ${count} pages',
+			'comicEdit.editVolume' => 'Edit volume',
+			'comicEdit.volumeHint' => 'Enter a volume name; leave empty for no grouping',
+			'comicEdit.volumeLabel' => ({required Object name}) => 'Volume: ${name}',
+			'comicEdit.volumeUpdated' => 'Volume updated',
+			'comicEdit.imageMissing' => 'Image file missing',
+			'comicEdit.busy' => 'Working...',
+			'comicEdit.notFound' => 'Download record not found',
+			'comicEdit.loadFailed' => 'Failed to load',
 			'comicInfo.follow' => 'Follow updates',
 			'comicInfo.unfollow' => 'Unfollow',
 			'comicInfo.exportComic' => 'Export comic',
@@ -2099,6 +2244,8 @@ extension on TranslationsEnUs {
 			'comicInfo.exportSuccess' => 'Export successful',
 			'comicInfo.detailsNotLoaded' => 'Comic details not fully loaded',
 			'comicInfo.followed' => 'Following updates',
+			_ => null,
+		} ?? switch (path) {
 			'comicInfo.unfollowed' => 'Unfollowed',
 			'comicInfo.confirmUnfollowTitle' => 'Unfollow',
 			'comicInfo.confirmUnfollowContent' => ({required Object title}) => 'Stop following "${title}"?',
@@ -2166,8 +2313,6 @@ extension on TranslationsEnUs {
 			'reader.perComicReadMode' => 'Enable per-comic settings',
 			'reader.perComicReadModeSubtitle' => 'Only applies to the current comic',
 			'reader.perComicFollowGlobal' => 'Follow global',
-			_ => null,
-		} ?? switch (path) {
 			'reader.perComicGlobalIs' => 'Global is',
 			'reader.perComicThisComic' => 'This comic',
 			'reader.infoDisplay' => 'Info display',
@@ -2587,7 +2732,7 @@ extension on TranslationsEnUs {
 			'about.networkError' => 'Network error',
 			'about.projectAddress' => 'Project',
 			'about.projectAddressDesc' => 'Like this project? Give it a star on GitHub!',
-			'about.projectLink' => 'Go to GitHub repo (deretame/Breeze) ⭐',
+			'about.projectLink' => 'Go to GitHub repo (breeze-project-org/Breeze) ⭐',
 			'about.contact' => 'Contact',
 			'about.contactDesc' => 'Have ideas or questions? Feel free to reach out~',
 			'about.feedback' => 'Feedback',
@@ -2613,6 +2758,8 @@ extension on TranslationsEnUs {
 			'about.disclaimerItem7Title' => '7. Contributor Responsibility',
 			'about.disclaimerItem7Content' => 'If external contributions are accepted, contributors act in their personal capacity and do not represent the developer\'s views or positions. The developer is not responsible for contributor actions or content.',
 			'about.disclaimerItem8Title' => '8. Legal Compliance',
+			_ => null,
+		} ?? switch (path) {
 			'about.disclaimerItem8Content' => 'Users must ensure their use complies with applicable laws and regulations. The developer is not responsible for consequences resulting from legal violations.',
 			'about.disclaimerImportant' => 'Important Notice',
 			'about.disclaimerImportantContent' => 'Please read and understand this disclaimer before using this project. If you do not agree with any term, stop using it immediately. Continued use constitutes acceptance of the entire disclaimer.',
@@ -2680,8 +2827,6 @@ extension on TranslationsEnUs {
 			'discover.search' => 'Search',
 			'discover.settings' => 'Settings',
 			'discover.pluginManagement' => 'Plugin Management',
-			_ => null,
-		} ?? switch (path) {
 			'discover.customOrder' => 'Custom plugin order',
 			'discover.resetOrder' => 'Reset order',
 			'discover.noPlugins' => 'No plugins available. Go to the plugin store to install one~',
@@ -2857,6 +3002,7 @@ extension on TranslationsEnUs {
 			'download.noTasks' => 'No download tasks',
 			'download.downloading' => 'Downloading',
 			'download.pending' => ({required Object count}) => 'Pending (${count})',
+			'download.selectedChapters' => ({required Object count}) => 'Selected ${count} chapters',
 			'download.taskDeleted' => 'Task deleted',
 			'download.deleteLastChapterContent' => 'Deleting this chapter will also delete the download record. Continue?',
 			'download.cancelTask' => 'Cancel Task',

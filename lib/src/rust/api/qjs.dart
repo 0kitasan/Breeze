@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import '../qjs.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 Future<void> qjsReplaceBundle({
@@ -86,6 +87,12 @@ void setHttpProxy({required String proxy}) =>
 
 void setSocks5Proxy({required String proxy}) =>
     RustLib.instance.api.crateApiQjsSetSocks5Proxy(proxy: proxy);
+
+void setDohConfig({required bool enabled, required List<String> providers}) =>
+    RustLib.instance.api.crateApiQjsSetDohConfig(
+      enabled: enabled,
+      providers: providers,
+    );
 
 void setTlsVerifyEnabled({required bool enabled}) =>
     RustLib.instance.api.crateApiQjsSetTlsVerifyEnabled(enabled: enabled);

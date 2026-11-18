@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:zephyr/config/global/global_setting.dart';
 import 'package:zephyr/cubit/plugin_registry_cubit.dart';
 import 'package:zephyr/plugin/plugin_registry_service.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
 import 'package:zephyr/page/search/cubit/search_cubit.dart';
 import 'package:zephyr/page/search/widget/search_input_dialog.dart';
 import 'package:zephyr/page/search/widget/source_select_dialog.dart';
@@ -36,7 +37,9 @@ class SearchAggregateResultPage extends StatelessWidget
   Widget wrappedRoute(BuildContext context) {
     final registry = context.read<PluginRegistryCubit>().state;
     final visiblePlugins = PluginRegistryService.I.sortPlugins(
-      registry.plugins.values.where((state) => !state.isDeleted),
+      registry.plugins.values.where(
+        (state) => !state.isDeleted && !isLocalComicPluginId(state.uuid),
+      ),
     );
     final initial = selectedSources.isNotEmpty
         ? {for (final entry in selectedSources.entries) entry.key: entry.value}

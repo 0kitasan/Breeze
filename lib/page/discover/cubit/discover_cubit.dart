@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zephyr/cubit/plugin_registry_cubit.dart';
-import 'package:zephyr/plugin/plugin_registry_service.dart';
 import 'package:zephyr/i18n/strings.g.dart';
-import 'package:zephyr/widgets/toast.dart';
 import 'package:zephyr/main.dart';
+import 'package:zephyr/plugin/local_comic_plugin.dart';
+import 'package:zephyr/plugin/plugin_registry_service.dart';
+import 'package:zephyr/widgets/toast.dart';
 
 /// Discover 页状态：插件列表 + 全局 info 快照引用 + 开关状态。
 ///
@@ -97,7 +98,9 @@ class DiscoverCubit extends Cubit<DiscoverState> {
     Map<String, PluginRuntimeState> all,
   ) {
     final sorted = service.sortPlugins(
-      all.values.where((plugin) => !plugin.isDeleted),
+      all.values.where(
+        (plugin) => !plugin.isDeleted && !isLocalComicPluginId(plugin.uuid),
+      ),
     );
     return {for (final plugin in sorted) plugin.uuid: plugin};
   }
